@@ -1,0 +1,189 @@
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+
+import paymentService from "./paymentService";
+
+// =====================================
+// INITIAL STATE
+// =====================================
+
+const initialState = {
+  order: null,
+
+  payment: null,
+
+  isLoading: false,
+
+  isSuccess: false,
+
+  isError: false,
+
+  message: "",
+};
+
+// =====================================
+// ERROR HANDLER
+// =====================================
+
+const getErrorMessage = (error) => {
+  return (
+    error.response?.data?.message || error.message || "Something went wrong"
+  );
+};
+
+// =====================================
+// CREATE PAYMENT ORDER
+//
+// Razorpay Order Create
+// =====================================
+
+export const createPaymentOrder = createAsyncThunk(
+  "payment/createOrder",
+
+  async (
+    appointmentId,
+
+    thunkAPI,
+  ) => {
+    try {
+      return await paymentService.createPaymentOrder(appointmentId);
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+// =====================================
+// VERIFY PAYMENT
+//
+// Razorpay Callback
+// =====================================
+
+export const verifyPayment = createAsyncThunk(
+  "payment/verify",
+
+  async (
+    paymentData,
+
+    thunkAPI,
+  ) => {
+    try {
+      return await paymentService.verifyPayment(paymentData);
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+// =====================================
+// SLICE
+// =====================================
+
+const paymentSlice = createSlice({
+  name: "payment",
+
+  initialState,
+
+  reducers: {
+    resetPayment: (state) => {
+      state.isLoading = false;
+
+      state.isSuccess = false;
+
+      state.isError = false;
+
+      state.message = "";
+    },
+
+    clearPayment: (state) => {
+      state.order = null;
+
+      state.payment = null;
+    },
+  },
+
+  extraReducers: (builder) => {
+    builder
+
+      // ============================
+      // CREATE ORDER
+      // ============================
+
+      .addCase(
+        createPaymentOrder.pending,
+
+        (state) => {
+          state.isLoading = true;
+        },
+      )
+
+      .addCase(
+        createPaymentOrder.fulfilled,
+
+        (state, action) => {
+          state.isLoading = false;
+
+          state.isSuccess = true;
+
+          state.order = action.payload;
+        },
+      )
+
+      .addCase(
+        createPaymentOrder.rejected,
+
+        (state, action) => {
+          state.isLoading = false;
+
+          state.isError = true;
+
+          state.message = action.payload;
+        },
+      )
+
+      // ============================
+      // VERIFY PAYMENT
+      // ============================
+
+      .addCase(
+        verifyPayment.pending,
+
+        (state) => {
+          state.isLoading = true;
+        },
+      )
+
+      .addCase(
+        verifyPayment.fulfilled,
+
+        (state, action) => {
+          state.isLoading = false;
+
+          state.isSuccess = true;
+
+          state.payment = action.payload.appointment;
+
+          state.order = null;
+        },
+      )
+
+      .addCase(
+        verifyPayment.rejected,
+
+        (state, action) => {
+          state.isLoading = false;
+
+          state.isError = true;
+
+          state.message = action.payload;
+        },
+      );
+  },
+});
+
+export const {
+  resetPayment,
+
+  clearPayment,
+} = paymentSlice.actions;
+
+export default paymentSlice.reducer;
