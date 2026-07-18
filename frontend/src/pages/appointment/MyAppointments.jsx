@@ -193,7 +193,7 @@ font-semibold
               </p>
 
               <p className="mt-2">
-                ⏰ {item.appointmentTime}
+                ⏰ {item.slot?.start} - {item.slot?.end}
               </p>
 
               <p className="mt-2">

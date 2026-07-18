@@ -279,7 +279,7 @@ Amount : ₹${appointment.booking.consultationFee}
     return res.status(201).json({
       success: true,
       message: "Appointment booked successfully.",
-      data: appointmentDetails,
+      appointment: appointmentDetails,
     });
   } catch (error) {
     //duplicate-key handling
@@ -878,6 +878,7 @@ export const getHospitalAppointments = async (req, res) => {
       success: true,
       page,
       limit,
+      total,
       totalPages: Math.ceil(total / limit),
       appointments,
     });
@@ -919,6 +920,10 @@ export const getDoctorAppointments = async (req, res) => {
     const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
+    const total = await Appointment.countDocuments({
+      doctor: doctorId,
+    });
+
     const appointments = await Appointment.find({
       doctor: doctorId,
     })
@@ -935,7 +940,8 @@ export const getDoctorAppointments = async (req, res) => {
       success: true,
       page,
       limit,
-      count: appointments.length,
+      total,
+      totalPages: Math.ceil(total / limit),
       appointments,
     });
   } catch (error) {
@@ -964,18 +970,18 @@ export const getAvailableSlots = async (req, res) => {
     const weekDay = DAYS[new Date(date).getDay()];
 
     console.log("Date:", date);
-console.log("Week Day:", weekDay);
+    console.log("Week Day:", weekDay);
 
-    const doctor = await Doctor.findById(doctorId).lean();
+    // const doctor = await Doctor.findById(doctorId).lean();
 
-    console.log(doctor);
+    // console.log(doctor);
 
-    if (!doctor) {
-      return res.status(404).json({
-        success: false,
-        message: "Doctor not found",
-      });
-    }
+    // if (!doctor) {
+    //   return res.status(404).json({
+    //     success: false,
+    //     message: "Doctor not found",
+    //   });
+    // }
 
     const doctorData = await Doctor.aggregate([
       {

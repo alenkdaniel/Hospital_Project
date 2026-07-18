@@ -31,15 +31,13 @@ const DoctorDashboard = () => {
   // LOAD DOCTOR APPOINTMENTS
   // =====================================
 
-  useEffect(() => {
-    if (user?._id) {
-      dispatch(getDoctorAppointments(user._id));
-    }
+useEffect(() => {
+  dispatch(getDoctorAppointments());
 
-    return () => {
-      dispatch(resetAppointment());
-    };
-  }, [dispatch, user?._id]);
+  return () => {
+    dispatch(resetAppointment());
+  };
+}, [dispatch]);
 
   // =====================================
   // ERROR HANDLING
@@ -267,14 +265,14 @@ text-sm
                 📋 {item.booking?.appointmentNumber}
               </p>
 
-              <p
+              {/* <p
                 className="
 text-gray-500
 mt-1
 "
               >
                 🎫 Token #{item.queue?.tokenNumber}
-              </p>
+              </p> */}
             </div>
 
             {/* MEDICAL */}
@@ -303,7 +301,7 @@ text-gray-500
 mt-2
 "
               >
-                ⏳ {item.queue?.estimatedWaitingTime} mins
+                ⏱ Duration: {item.queue?.consultationDuration} mins
               </p>
             </div>
 
@@ -332,7 +330,7 @@ mt-2
 text-gray-500
 "
               >
-                ⏰ {item.appointmentTime}
+                ⏰ {item.slot?.start} - {item.slot?.end}
               </p>
 
               <p

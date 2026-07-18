@@ -27,7 +27,9 @@ const HospitalAdminDashboard = () => {
     message,
   } = useSelector((state) => state.hospital);
 
-  const { doctors } = useSelector((state) => state.doctor);
+  // const { doctors } = useSelector((state) => state.doctor);
+
+  const { myDoctors } = useSelector((state) => state.doctor);
 
   const { hospitalAppointments } = useSelector(
     (state) => state.appointment
@@ -192,7 +194,9 @@ mt-10
             {[
               ["🏥", "Hospitals", 1],
 
-              ["👨‍⚕️", "Doctors", doctors?.length || 0],
+              // ["👨‍⚕️", "Doctors", doctors?.length || 0],
+
+              ["👨‍⚕️", "Doctors", myDoctors?.length || 0],
 
               ["📅", "Appointments", hospitalAppointments?.length || 0],
 

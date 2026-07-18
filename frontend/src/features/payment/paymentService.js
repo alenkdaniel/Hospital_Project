@@ -1,5 +1,7 @@
 import API from "../../api/axios";
 
+import toast from "react-hot-toast";
+
 // =====================================
 // CREATE RAZORPAY ORDER
 //
@@ -42,6 +44,12 @@ const verifyPayment = async (paymentData) => {
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
+    // const script = document.createElement("script");
+
+    if (window.Razorpay) {
+      return resolve(true);
+    }
+
     const script = document.createElement("script");
 
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -88,8 +96,13 @@ const openRazorpayCheckout = async ({
 
     order_id: order.orderId,
 
-    handler: function (response) {
-      onSuccess(response);
+    handler: async (response) => {
+      await onSuccess(response);
+    },
+    modal: {
+      ondismiss: () => {
+        toast("Payment cancelled.");
+      },
     },
 
     prefill: {
@@ -105,7 +118,17 @@ const openRazorpayCheckout = async ({
     },
   };
 
+  if (!window.Razorpay) {
+    throw new Error("Razorpay SDK not available");
+  }
+
   const paymentObject = new window.Razorpay(options);
+
+  paymentObject.on("payment.failed", function (response) {
+    console.error("Payment Failed:", response.error);
+
+    toast.error(response.error.description || "Payment Failed");
+  });
 
   paymentObject.open();
 };

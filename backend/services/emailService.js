@@ -9,13 +9,21 @@ const transporter = nodemailer.createTransport({
 
   port: Number(process.env.EMAIL_PORT),
 
-  secure: false,
+  secure: Number(process.env.EMAIL_PORT) === 465,
 
   auth: {
     user: process.env.EMAIL_USER,
 
     pass: process.env.EMAIL_PASSWORD,
   },
+});
+
+transporter.verify((error) => {
+  if (error) {
+    console.error("Email Server Error:", error.message);
+  } else {
+    console.log("Email server is ready");
+  }
 });
 
 const sendEmail = async ({ to, subject, html }) => {
@@ -47,15 +55,15 @@ const sendEmail = async ({ to, subject, html }) => {
     const info = await transporter.sendMail(mailOptions);
     return {
       success: true,
-
       messageId: info.messageId,
+      accepted: info.accepted,
+      rejected: info.rejected,
     };
   } catch (error) {
-
+    console.error("EMAIL ERROR:", error);
 
     return {
       success: false,
-
       error: error.message,
     };
   }

@@ -96,8 +96,11 @@ const paymentSlice = createSlice({
 
     clearPayment: (state) => {
       state.order = null;
-
       state.payment = null;
+      state.message = "";
+      state.isLoading = false;
+      state.isSuccess = false;
+      state.isError = false;
     },
   },
 
@@ -108,23 +111,21 @@ const paymentSlice = createSlice({
       // CREATE ORDER
       // ============================
 
-      .addCase(
-        createPaymentOrder.pending,
-
-        (state) => {
-          state.isLoading = true;
-        },
-      )
+      .addCase(createPaymentOrder.pending, (state) => {
+        state.isLoading = true;
+        state.isError = false;
+        state.isSuccess = false;
+        state.message = "";
+      })
 
       .addCase(
         createPaymentOrder.fulfilled,
 
         (state, action) => {
           state.isLoading = false;
-
           state.isSuccess = true;
-
           state.order = action.payload;
+          state.payment = null;
         },
       )
 
@@ -144,13 +145,12 @@ const paymentSlice = createSlice({
       // VERIFY PAYMENT
       // ============================
 
-      .addCase(
-        verifyPayment.pending,
-
-        (state) => {
-          state.isLoading = true;
-        },
-      )
+      .addCase(verifyPayment.pending, (state) => {
+        state.isLoading = true;
+        state.isError = false;
+        state.isSuccess = false;
+        state.message = "";
+      })
 
       .addCase(
         verifyPayment.fulfilled,
@@ -161,6 +161,8 @@ const paymentSlice = createSlice({
           state.isSuccess = true;
 
           state.payment = action.payload.appointment;
+
+          state.message = action.payload.message;
 
           state.order = null;
         },
@@ -173,6 +175,8 @@ const paymentSlice = createSlice({
           state.isLoading = false;
 
           state.isError = true;
+
+          state.order = null;
 
           state.message = action.payload;
         },

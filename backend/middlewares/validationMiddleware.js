@@ -142,34 +142,32 @@ export const hospitalValidation = [
 // =====================================
 
 export const doctorValidation = [
-  body("name")
-    .notEmpty()
+  body("name").notEmpty().withMessage("Doctor name required"),
 
-    .withMessage("Doctor name required"),
+  body("gender")
+    .isIn(["Male", "Female", "Other"])
+    .withMessage("Select a valid gender"),
 
-  body("specialization")
-    .notEmpty()
+  body("department").notEmpty().withMessage("Department required"),
 
-    .withMessage("Specialization required"),
+  body("specialization").notEmpty().withMessage("Specialization required"),
 
-  body("qualification")
-    .notEmpty()
+  body("qualification").notEmpty().withMessage("Qualification required"),
 
-    .withMessage("Qualification required"),
+  body("licenseNumber").notEmpty().withMessage("License number required"),
 
-  body("experience")
-    .isNumeric()
-
-    .withMessage("Experience should be number"),
+  body("experience").isNumeric().withMessage("Experience should be a number"),
 
   body("consultationFee")
     .isNumeric()
+    .withMessage("Consultation fee should be a number"),
 
-    .withMessage("Fee should be number"),
+  body("contact.email").isEmail().withMessage("Valid email required"),
+
+  body("contact.phone").notEmpty().withMessage("Phone number required"),
 
   validate,
 ];
-
 // =====================================
 // APPOINTMENT VALIDATION
 // =====================================
@@ -198,10 +196,9 @@ export const appointmentValidation = [
 
     .withMessage("Date required"),
 
-  body("appointmentTime")
-    .notEmpty()
+  body("slot.start").notEmpty().withMessage("Slot start time required"),
 
-    .withMessage("Time required"),
+  body("slot.end").notEmpty().withMessage("Slot end time required"),
 
   validate,
 ];

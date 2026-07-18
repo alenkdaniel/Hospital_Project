@@ -80,6 +80,12 @@ export const createDoctor = async (req, res) => {
 
     let weeklySchedule = req.body.weeklySchedule || [];
 
+    if (weeklySchedule.length === 0) {
+      return res.status(400).json({
+        message: "Please select working days",
+      });
+    }
+
     console.log("=================================");
     console.log("REQ BODY");
     console.log(req.body);
@@ -120,8 +126,6 @@ export const createDoctor = async (req, res) => {
     // CHECK IF DOCTOR EMAIL EXISTS
     // =================================
 
-    let existingUser;
-
     try {
       // console.log("STEP 3.1");
       // console.log(req.body.contact);
@@ -129,7 +133,7 @@ export const createDoctor = async (req, res) => {
       // console.log("STEP 3.2");
       // console.log(req.body.contact?.email);
 
-      existingUser = await User.findOne({
+      const existingUser = await User.findOne({
         email: req.body.contact.email,
       });
 
@@ -140,17 +144,27 @@ export const createDoctor = async (req, res) => {
           message: "Doctor email already exists",
         });
       }
+
+      const existingDoctor = await Doctor.findOne({
+        licenseNumber: req.body.licenseNumber,
+      });
+
+      if (existingDoctor) {
+        return res.status(400).json({
+          message: "License number already exists",
+        });
+      }
     } catch (err) {
       // console.error("ERROR INSIDE User.findOne()");
       console.error(err);
       throw err;
     }
 
-    if (existingUser) {
-      return res.status(400).json({
-        message: "Doctor email already exists",
-      });
-    }
+    // if (existingUser) {
+    //   return res.status(400).json({
+    //     message: "Doctor email already exists",
+    //   });
+    // }
 
     console.log("STEP 3.1 - Contact");
     console.log(req.body.contact);
@@ -215,7 +229,7 @@ export const createDoctor = async (req, res) => {
 
       contact: req.body.contact,
 
-      image: imageUrl,
+      image: imageUrl || undefined,
 
       hospital: hospital._id,
 
@@ -274,29 +288,44 @@ This link expires in 1 hour.
 
 export const getMyDoctors = async (req, res) => {
   try {
-    let filter = {};
+    let doctors;
 
-    if (req.user.role !== "super_admin") {
-      filter.createdBy = req.user._id;
-    }
+    console.log("========== GET MY DOCTORS ==========");
+    console.log("Logged in User:", req.user._id);
+    console.log("Role:", req.user.role);
 
-    const doctors = await Doctor.find(filter)
-
-      .populate(
-        "hospital",
-
-        "name address",
-      )
-
-      .sort({
-        createdAt: -1,
+    if (req.user.role === "super_admin") {
+      doctors = await Doctor.find()
+        .populate("hospital", "name address")
+        .sort({ createdAt: -1 });
+    } else {
+      const hospital = await Hospital.findOne({
+        createdBy: req.user._id,
       });
 
-    console.log("Logged in user:", req.user._id);
-    console.log("Filter:", filter);
+      console.log("Hospital Found:");
+      console.log(hospital);
+
+      if (!hospital) {
+        return res.status(404).json({
+          message: "Hospital not found",
+        });
+      }
+
+      doctors = await Doctor.find({
+        hospital: hospital._id,
+      })
+        .populate("hospital", "name address")
+        .sort({ createdAt: -1 });
+
+      console.log("Doctors Found:", doctors.length);
+      console.log(doctors);
+    }
 
     res.json(doctors);
   } catch (error) {
+    console.log(error);
+
     res.status(500).json({
       message: error.message,
     });

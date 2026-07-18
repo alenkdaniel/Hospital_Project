@@ -25,15 +25,16 @@ export const createPaymentOrder = async (req, res) => {
       .populate("patient", "name email");
 
     if (!appointment) {
-      // SECURITY CHECK
-
-      if (!appointment.patient._id.equals(req.user._id)) {
-        return res.status(403).json({
-          message: "Not allowed",
-        });
-      }
       return res.status(404).json({
         message: "Appointment not found",
+      });
+    }
+
+    // SECURITY CHECK
+
+    if (!appointment.patient._id.equals(req.user._id)) {
+      return res.status(403).json({
+        message: "Not allowed",
       });
     }
 
@@ -45,15 +46,44 @@ export const createPaymentOrder = async (req, res) => {
       });
     }
 
-    if (["cancelled", "completed"].includes(appointment.status)) {
+    if (
+      ["cancelled", "completed", "rejected", "no_show"].includes(
+        appointment.status,
+      )
+    ) {
       return res.status(400).json({
         success: false,
         message: `Appointment is ${appointment.status}`,
       });
     }
 
+    // APPOINTMENT DATE CHECK
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const appointmentDate = new Date(appointment.appointmentDate);
+    appointmentDate.setHours(0, 0, 0, 0);
+
+    if (appointmentDate < today) {
+      return res.status(400).json({
+        success: false,
+        message: "Appointment has expired",
+      });
+    }
+
+    const amount =
+      appointment.payment.amount || appointment.booking.consultationFee;
+
+    if (amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment amount",
+      });
+    }
+
     const order = await razorpay.orders.create({
-      amount: appointment.booking.consultationFee * 100,
+      amount: amount * 100,
 
       currency: "INR",
 
@@ -64,20 +94,23 @@ export const createPaymentOrder = async (req, res) => {
 
     appointment.payment.razorpayOrderId = order.id;
 
+    appointment.payment.amount = amount;
+
     await appointment.save();
 
     res.json({
+      success: true,
       orderId: order.id,
-
       amount: order.amount,
-
       currency: order.currency,
-
       key: process.env.RAZORPAY_KEY_ID,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
+    console.error("CREATE PAYMENT ORDER ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while creating the payment order.",
     });
   }
 };
@@ -134,7 +167,28 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    if (appointment.payment.razorpayOrderId !== razorpay_order_id) {
+    if (!appointment.patient._id.equals(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Not allowed",
+      });
+    }
+
+    if (
+      ["cancelled", "completed", "rejected", "no_show"].includes(
+        appointment.status,
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `Appointment is ${appointment.status}`,
+      });
+    }
+
+    if (
+      !appointment.payment.razorpayOrderId ||
+      appointment.payment.razorpayOrderId !== razorpay_order_id
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid Razorpay order.",
@@ -143,10 +197,13 @@ export const verifyPayment = async (req, res) => {
 
     // UPDATE PAYMENT
 
-    if (appointment.payment.status === "paid") {
+    if (
+      appointment.payment.status === "paid" ||
+      appointment.payment.status === "refunded"
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Payment already verified.",
+        message: "Payment already completed or refunded.",
       });
     }
 
@@ -158,7 +215,8 @@ export const verifyPayment = async (req, res) => {
 
     appointment.payment.paidAt = new Date();
 
-    appointment.payment.amount = appointment.booking.consultationFee;
+    appointment.payment.amount =
+      appointment.payment.amount || appointment.booking.consultationFee;
 
     await appointment.save();
 
@@ -184,7 +242,7 @@ Hospital : ${appointment.hospital.name}<br/>
 
 Doctor : ${appointment.doctor.name}<br/>
 
-Amount : ₹${appointment.booking.consultationFee}
+Amount : ₹${appointment.payment.amount}
 
 `,
         }),
@@ -194,13 +252,16 @@ Amount : ₹${appointment.booking.consultationFee}
     }
 
     res.json({
+      success: true,
       message: "Payment verified successfully",
-
       appointment,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
+    console.error("VERIFY PAYMENT ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while verifying the payment.",
     });
   }
 };

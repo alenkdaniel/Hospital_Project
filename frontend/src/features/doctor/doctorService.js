@@ -6,6 +6,7 @@ import API from "../../api/axios";
 // =====================================
 
 const getDoctors = async () => {
+  
   const response = await API.get("/doctors");
 
   return response.data;

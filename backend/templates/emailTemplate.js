@@ -4,7 +4,7 @@
 
 const emailTemplate = ({
   title,
-  greeting = "Hello",
+  greeting = "Dear Customer",
   message,
   otp,
   actionText,
@@ -17,6 +17,18 @@ const emailTemplate = ({
 
 <head>
   <meta charset="UTF-8" />
+
+  <style>
+.preview-text{
+display:none!important;
+visibility:hidden;
+opacity:0;
+color:transparent;
+height:0;
+width:0;
+overflow:hidden;
+}
+</style>
 
   <meta
     name="viewport"
@@ -34,6 +46,10 @@ const emailTemplate = ({
   "
 >
 
+<div class="preview-text">
+${title}
+</div>
+
 
 <table
   width="100%"
@@ -48,11 +64,11 @@ const emailTemplate = ({
 <!-- MAIN CONTAINER -->
 
 <table
-  width="600"
+ width="100%"
   cellpadding="0"
   cellspacing="0"
-
   style="
+    max-width:600px;
     background:#ffffff;
     margin:30px;
     border-radius:12px;

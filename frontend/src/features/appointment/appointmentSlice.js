@@ -128,9 +128,9 @@ export const getHospitalAppointments = createAsyncThunk(
 export const getDoctorAppointments = createAsyncThunk(
   "appointment/doctor",
 
-  async (id, thunkAPI) => {
+  async (_, thunkAPI) => {
     try {
-      return await appointmentService.getDoctorAppointments(id);
+      return await appointmentService.getDoctorAppointments();
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error));
     }

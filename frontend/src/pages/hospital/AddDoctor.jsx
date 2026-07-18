@@ -187,10 +187,14 @@ const AddDoctor = () => {
     }
 
     try {
-      await dispatch(createDoctor(buildDoctorFormData())).unwrap();
-      for (const [key, value] of buildDoctorFormData().entries()) {
-  console.log(key, value);
-}
+      const formData = buildDoctorFormData();
+
+      for (const [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
+
+      await dispatch(createDoctor(formData)).unwrap();
+
     } catch (error) {
       console.error(error);
       toast.error(error || "Failed to create doctor");

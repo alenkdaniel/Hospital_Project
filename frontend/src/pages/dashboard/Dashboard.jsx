@@ -2,8 +2,36 @@ import { useSelector } from "react-redux";
 
 import { motion } from "framer-motion";
 
+import { useEffect } from "react";
+
+import { useDispatch } from "react-redux";
+
+import { getHospitals } from "../../features/hospital/hospitalSlice";
+
+import { getDoctors } from "../../features/doctor/doctorSlice";
+
+import { getMyAppointments } from "../../features/appointment/appointmentSlice";
+
 const Dashboard = () => {
   const { user } = useSelector((state) => state.auth);
+
+  const { hospitals } = useSelector((state) => state.hospital);
+
+  const { doctors } = useSelector((state) => state.doctor);
+
+  const { myAppointments } = useSelector((state) => state.appointment);
+
+  const dispatch = useDispatch();
+
+
+  useEffect(() => {
+    dispatch(getHospitals());
+
+    dispatch(getDoctors());
+
+    dispatch(getMyAppointments());
+  }, [dispatch]);
+
 
   return (
     <div
@@ -64,11 +92,11 @@ mt-10
 "
       >
         {[
-          ["🏥", "Nearby Hospitals", "25 Available"],
+          ["🏥", "Nearby Hospitals", hospitals?.length || 0],
 
-          ["👨‍⚕️", "Doctors", "120 Specialists"],
+          ["👨‍⚕️", "Doctors", doctors?.length || 0],
 
-          ["📅", "Appointments", "3 Upcoming"],
+          ["📅", "Appointments", myAppointments?.length || 0],
 
           ["🚑", "Emergency", "24/7 Active"],
         ].map((item, index) => (
@@ -145,15 +173,9 @@ mb-6
             Nearby Hospitals
           </h2>
 
-          {[
-            "City Care Hospital",
-
-            "Life Line Medical Center",
-
-            "Metro Health Clinic",
-          ].map((hospital, index) => (
+          {hospitals?.slice(0, 5).map((hospital) => (
             <div
-              key={index}
+              key={hospital._id}
               className="
 flex
 justify-between
@@ -169,7 +191,7 @@ font-semibold
 text-lg
 "
                 >
-                  {hospital}
+                  {hospital.name}
                 </h3>
 
                 <p
@@ -177,7 +199,7 @@ text-lg
 text-gray-500
 "
                 >
-                  Open now • 2 km away
+                  {hospital.address?.city} • {hospital.verification?.status}
                 </p>
               </div>
 

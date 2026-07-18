@@ -195,14 +195,14 @@ text-sm
                 📋 {item.booking?.appointmentNumber}
               </p>
 
-              <p
+              {/* <p
                 className="
 text-gray-500
 mt-1
 "
               >
                 🎫 Token #{item.queue?.tokenNumber}
-              </p>
+              </p> */}
 
               <p
                 className="
@@ -270,7 +270,7 @@ mt-2
 text-gray-500
 "
               >
-                ⏰ {item.appointmentTime}
+                ⏰ {item.slot?.start} - {item.slot?.end}
               </p>
 
               <p
