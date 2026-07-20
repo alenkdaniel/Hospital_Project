@@ -264,3 +264,163 @@ export const verifyPaymentValidation = [
 
   validate,
 ];
+
+// =====================================
+// MEDICINE VALIDATION
+// =====================================
+
+export const medicineValidation = [
+  body("name")
+    .trim()
+    .notEmpty()
+    .withMessage("Medicine name is required"),
+
+  body("genericName")
+    .optional()
+    .trim(),
+
+  body("brandName")
+    .optional()
+    .trim(),
+
+  body("category")
+    .optional()
+    .trim(),
+
+  body("dosageForm")
+    .optional()
+    .isIn([
+      "Tablet",
+      "Capsule",
+      "Syrup",
+      "Injection",
+      "Cream",
+      "Drops",
+      "Inhaler",
+      "Ointment",
+      "Powder",
+      "Other",
+    ])
+    .withMessage("Invalid dosage form"),
+
+  body("strength")
+    .optional()
+    .trim(),
+
+  body("manufacturer")
+    .optional()
+    .trim(),
+
+  validate,
+];
+
+// =====================================
+// UPDATE MEDICINE VALIDATION
+// =====================================
+
+export const updateMedicineValidation = [
+  body("name")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("Medicine name cannot be empty"),
+
+  body("genericName")
+    .optional()
+    .trim(),
+
+  body("brandName")
+    .optional()
+    .trim(),
+
+  body("category")
+    .optional()
+    .trim(),
+
+  body("dosageForm")
+    .optional()
+    .isIn([
+      "Tablet",
+      "Capsule",
+      "Syrup",
+      "Injection",
+      "Cream",
+      "Drops",
+      "Inhaler",
+      "Ointment",
+      "Powder",
+      "Other",
+    ])
+    .withMessage("Invalid dosage form"),
+
+  body("strength")
+    .optional()
+    .trim(),
+
+  body("manufacturer")
+    .optional()
+    .trim(),
+
+  validate,
+];
+
+// =====================================
+// MEDICAL TEST VALIDATION
+// =====================================
+
+export const medicalTestValidation = [
+  body("name")
+    .trim()
+    .notEmpty()
+    .withMessage("Medical test name is required"),
+
+  body("category")
+    .optional()
+    .trim(),
+
+  body("description")
+    .optional()
+    .trim(),
+
+  body("preparation")
+    .optional()
+    .trim(),
+
+  body("price")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Price must be a positive number"),
+
+  validate,
+];
+
+// =====================================
+// UPDATE MEDICAL TEST VALIDATION
+// =====================================
+
+export const updateMedicalTestValidation = [
+  body("name")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("Medical test name cannot be empty"),
+
+  body("category")
+    .optional()
+    .trim(),
+
+  body("description")
+    .optional()
+    .trim(),
+
+  body("preparation")
+    .optional()
+    .trim(),
+
+  body("price")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Price must be a positive number"),
+
+  validate,
+];

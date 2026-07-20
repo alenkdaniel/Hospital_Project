@@ -41,6 +41,9 @@ import superAdminRoutes from "./routes/superAdminRoutes.js";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 
+import medicineRoutes from "./routes/medicineRoutes.js";
+import medicalTestRoutes from "./routes/medicalTestRoutes.js";
+
 // ===============================
 // DATABASE + CLOUDINARY
 // ===============================
@@ -130,6 +133,10 @@ app.use("/api/doctors", doctorRoutes);
 app.use("/api/appointments", appointmentRoutes);
 
 app.use("/api/payments", paymentRoutes);
+
+app.use("/api/medicines", medicineRoutes);
+
+app.use("/api/medical-tests", medicalTestRoutes);
 
 app.use("/api/super-admin", superAdminRoutes);
 

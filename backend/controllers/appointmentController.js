@@ -218,11 +218,18 @@ export const createAppointment = async (req, res) => {
     // 9. Generate Appointment Number
     // ======================================================
 
-    const appointmentNumber = generateAppointmentNumber();
+    const appointmentNumber = await generateAppointmentNumber();
 
     // ======================================================
     // 10. Create Appointment
     // ======================================================
+
+    console.log("appointmentNumber:", appointmentNumber);
+    console.log("typeof:", typeof appointmentNumber);
+    console.log("consultationFee:", consultationFee);
+    console.log("slot:", slot);
+    console.log("hospital:", hospital);
+    console.log("doctor:", doctor);
 
     const appointment = await Appointment.create({
       patient: req.user._id,
@@ -784,6 +791,53 @@ Reason : ${reason || "Not provided"}
       success: true,
       message: "Appointment rescheduled successfully",
       appointment,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// =================================
+// DELETE UNPAID APPOINTMENT
+// =================================
+
+export const deleteUnpaidAppointment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const appointment = await Appointment.findById(id);
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
+    }
+
+    // Only the patient who created it can delete it
+    if (!appointment.patient.equals(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized",
+      });
+    }
+
+    // Never delete a paid appointment
+    if (appointment.payment.status === "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Paid appointment cannot be deleted",
+      });
+    }
+
+    await Appointment.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Unpaid appointment deleted",
     });
   } catch (error) {
     return res.status(500).json({

@@ -10,6 +10,7 @@ import {
   updateAppointmentStatus,
   cancelAppointment,
   rescheduleAppointment,
+  deleteUnpaidAppointment,
 } from "../controllers/appointmentController.js";
 
 import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
@@ -157,6 +158,20 @@ router.patch(
   ),
 
   updateAppointmentStatus,
+);
+
+// =================================
+// DELETE UNPAID APPOINTMENT
+// =================================
+
+router.delete(
+  "/:id/unpaid",
+
+  protect,
+
+  authorizeRoles("patient"),
+
+  deleteUnpaidAppointment,
 );
 
 export default router;

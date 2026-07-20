@@ -46,6 +46,9 @@ export const createPaymentOrder = createAsyncThunk(
   ) => {
     try {
       return await paymentService.createPaymentOrder(appointmentId);
+
+      console.log("Appointment ID:", appointmentId);
+      
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error));
     }

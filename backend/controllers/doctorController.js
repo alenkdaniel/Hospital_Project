@@ -4,6 +4,8 @@ import Hospital from "../models/Hospital.js";
 
 import User from "../models/User.js";
 
+import Appointment from "../models/Appointment.js";
+
 import crypto from "crypto";
 
 import sendEmail from "../services/emailService.js";
@@ -487,6 +489,67 @@ export const deleteDoctor = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: error.message,
+    });
+  }
+};
+
+// ======================================
+// GET TODAY'S APPOINTMENTS
+// ======================================
+
+export const getTodayAppointments = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({
+      user: req.user._id,
+    }).select("_id");
+
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor not found",
+      });
+    }
+
+    const today = new Date();
+
+    today.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+
+    const appointments = await Appointment.find({
+      doctor: doctor._id,
+
+      appointmentDate: {
+        $gte: today,
+        $lt: tomorrow,
+      },
+
+      status: "confirmed",
+
+      "payment.status": "paid",
+    })
+      .populate("patient", "name image opNumber gender phone dateOfBirth")
+      .populate("hospital", "name")
+      .sort({
+        "slot.start": 1,
+      })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+
+      count: appointments.length,
+
+      data: appointments,
+    });
+  } catch (error) {
+    console.error("GET TODAY APPOINTMENTS ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch today's appointments",
     });
   }
 };

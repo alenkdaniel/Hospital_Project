@@ -136,25 +136,11 @@ const appointmentSchema = new mongoose.Schema(
     // ===============================
 
     queue: {
-      // tokenNumber: {
-      //   type: Number,
-      //   required: true,
-      // },
-
-      // estimatedWaitingTime: {
-      //   type: Number,
-      //   default: 0,
-      // },
 
       consultationDuration: {
         type: Number,
         default: 10,
       },
-
-      // currentPosition: {
-      //   type: Number,
-      //   default: 0,
-      // },
 
       checkedIn: {
         type: Boolean,
@@ -163,8 +149,9 @@ const appointmentSchema = new mongoose.Schema(
 
       checkedInAt: Date,
 
-      completedAt: Date,
-
+completedAt: {
+  type: Date,
+},
       queueStatus: {
         type: String,
         enum: [
@@ -207,13 +194,125 @@ const appointmentSchema = new mongoose.Schema(
 
         default: "",
       },
-      prescription: {
+      doctorNotes: {
         type: String,
-
-        default: "",
+        trim: true,
       },
-      doctorNotes: String,
-      adminNotes: String,
+
+      adminNotes: {
+        type: String,
+        trim: true,
+      },
+    },
+
+    consultation: {
+      diagnosis: {
+        type: String,
+        trim: true,
+      },
+
+      medicines: {
+        type: [
+          {
+            medicine: {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: "Medicine",
+            },
+
+            dosage: {
+              type: String,
+              trim: true,
+            },
+
+            frequency: {
+              type: String,
+              trim: true,
+            },
+
+            duration: {
+              type: String,
+              trim: true,
+            },
+
+            instructions: {
+              type: String,
+              trim: true,
+            },
+          },
+        ],
+
+        default: [],
+      },
+
+      tests: {
+        type: [
+          {
+            test: {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: "MedicalTest",
+            },
+
+            notes: {
+              type: String,
+              trim: true,
+            },
+
+            status: {
+              type: String,
+              enum: ["recommended", "completed"],
+              default: "recommended",
+            },
+          },
+        ],
+
+        default: [],
+      },
+
+attachments: {
+  type: [
+    {
+      url: {
+        type: String,
+        trim: true,
+      },
+
+      name: {
+        type: String,
+        trim: true,
+      },
+
+      uploadedAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
+
+  default: [],
+},
+
+      remarks: {
+        type: String,
+        trim: true,
+      },
+
+      followUpDate: Date,
+
+consultationDate: {
+  type: Date,
+},
+      completedAt: Date,
+
+      completedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Doctor",
+      },
+
+      status: {
+        type: String,
+        enum: ["pending", "completed"],
+        default: "pending",
+      },
     },
 
     confirmation: {
@@ -326,6 +425,12 @@ appointmentSchema.index({
 
 appointmentSchema.index({
   createdAt: -1,
+});
+
+appointmentSchema.index({
+  doctor: 1,
+  status: 1,
+  appointmentDate: 1,
 });
 
 export default mongoose.model(

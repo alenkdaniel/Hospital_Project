@@ -1,302 +1,3 @@
-// import { useEffect, useState } from "react";
-
-// import { useParams, useNavigate } from "react-router-dom";
-
-// import { useDispatch, useSelector } from "react-redux";
-
-// import { getDoctorById } from "../../features/doctor/doctorSlice";
-
-// import {
-//   createAppointment,
-//   resetAppointment,
-// } from "../../features/appointment/appointmentSlice";
-
-// import {
-//   createPaymentOrder,
-//   verifyPayment,
-// } from "../../features/payment/paymentSlice";
-
-// import paymentService from "../../features/payment/paymentService";
-
-// import toast from "react-hot-toast";
-
-// const BookAppointment = () => {
-//   const { doctorId } = useParams();
-
-//   const navigate = useNavigate();
-
-//   const dispatch = useDispatch();
-
-//   const { user } = useSelector((state) => state.auth);
-
-//   const { doctor } = useSelector((state) => state.doctor);
-
-//   const {
-//     appointment,
-
-//     isLoading,
-
-//     isSuccess,
-
-//     isError,
-
-//     message,
-//   } = useSelector((state) => state.appointment);
-
-//   const [form, setForm] = useState({
-//   reason: "",
-
-//   date: "",
-
-//   time: "",
-// });
-
-//   // =======================
-//   // LOAD DOCTOR
-//   // =======================
-
-//   useEffect(() => {
-//     dispatch(getDoctorById(doctorId));
-//   }, [doctorId, dispatch]);
-
-//   // =======================
-//   // CHANGE
-//   // =======================
-
-//   const handleChange = (e) => {
-//     setForm({
-//       ...form,
-
-//       [e.target.name]: e.target.value,
-//     });
-//   };
-
-//   // =======================
-//   // BOOK APPOINTMENT
-//   // =======================
-
-//   const submitHandler = (e) => {
-//     e.preventDefault();
-
-//     if (!form.date) {
-//   toast.error("Select appointment date");
-//   return;
-// }
-
-//     if (!form.time) {
-//       toast.error("Select appointment time");
-
-//       return;
-//     }
-
-//     if (!doctor?.hospital) {
-//       toast.error("Hospital not found");
-
-//       return;
-//     }
-
-//   const data = {
-//   hospital: doctor.hospital._id || doctor.hospital,
-
-//   doctor: doctor._id,
-
-//   appointmentDate: form.date,
-
-//   appointmentTime: form.time,
-
-//   symptoms: form.reason,
-// };
-
-//     console.log("BOOKING DATA:", data);
-
-//     dispatch(createAppointment(data));
-//   };
-
-//   // =======================
-//   // PAYMENT
-//   // =======================
-
-//   useEffect(() => {
-//     const startPayment = async () => {
-//       if (isSuccess && appointment) {
-//         try {
-//           const orderResult = await dispatch(
-//             createPaymentOrder(appointment._id),
-//           ).unwrap();
-
-//           await paymentService.openRazorpayCheckout({
-//             order: orderResult,
-
-//             user,
-
-//             onSuccess: async (response) => {
-//               await dispatch(
-//                 verifyPayment({
-//                   appointmentId: appointment._id,
-
-//                   ...response,
-//                 }),
-//               );
-
-//               toast.success("Appointment booked successfully");
-
-//               navigate("/my");
-//             },
-//           });
-//         } catch (error) {
-//           toast.error("Payment failed");
-//         }
-//       }
-//     };
-
-//     startPayment();
-
-//     if (isError) {
-//       toast.error(message);
-//     }
-
-//     return () => {
-//       dispatch(resetAppointment());
-//     };
-//   }, [isSuccess, isError, message, appointment, dispatch, navigate, user]);
-
-//   return (
-//     <div
-//       className="
-// min-h-screen
-// bg-gray-50
-// pt-28
-// px-6
-// flex
-// justify-center
-// "
-//     >
-//       <div
-//         className="
-// bg-white
-// shadow-2xl
-// rounded-[35px]
-// p-10
-// w-full
-// max-w-5xl
-// "
-//       >
-//         <h1 className="text-4xl font-bold mb-8">📅 Book Appointment</h1>
-
-//         {/* DOCTOR DETAILS */}
-
-//         {doctor && (
-//           <div
-//             className="
-// bg-blue-50
-// p-6
-// rounded-3xl
-// mb-8
-// "
-//           >
-//             <h2 className="text-2xl font-bold">Dr. {doctor.name}</h2>
-
-//             <p>🩺 {doctor.specialization}</p>
-
-//             <p>₹ {doctor.consultationFee}</p>
-
-//             {/* AVAILABLE DAYS */}
-
-//             <div
-//               className="
-// mt-5
-// bg-green-100
-// p-4
-// rounded-xl
-// "
-//             >
-//               <p>Available Days: {doctor.availability?.days?.join(", ")}</p>
-
-//               <p className="mt-3 font-bold">Available Slots:</p>
-
-//               <div className="flex flex-wrap gap-2 mt-2">
-//                 {doctor.availability?.slots
-
-//                   ?.filter((slot) => !slot.isBooked)
-
-//                   .map((slot, index) => (
-//                     <span
-//                       key={index}
-//                       className="
-// bg-white
-// px-4
-// py-2
-// rounded-xl
-// "
-//                     >
-//                       {slot.start}-{slot.end}
-//                     </span>
-//                   ))}
-//               </div>
-//             </div>
-//           </div>
-//         )}
-
-//         <form onSubmit={submitHandler} className="space-y-5">
-
-//           <input
-//             name="reason"
-//             value={form.reason}
-//             onChange={handleChange}
-//             placeholder="Problem"
-//             className="input"
-//           />
-
-//           <input
-//             type="date"
-//             name="date"
-//             value={form.date}
-//             onChange={handleChange}
-//             className="input"
-//           />
-
-//           {/* SLOT SELECT */}
-
-//           <select
-//             name="time"
-//             value={form.time}
-//             onChange={handleChange}
-//             className="input"
-//           >
-//             <option value="">Select Appointment Time</option>
-
-//             {doctor?.availability?.slots
-
-//               ?.filter((slot) => !slot.isBooked)
-
-//               .map((slot, index) => (
-//                 <option key={index} value={slot.start}>
-//                   {slot.start}-{slot.end}
-//                 </option>
-//               ))}
-//           </select>
-
-//           <button
-//             disabled={isLoading}
-//             className="
-// w-full
-// bg-blue-600
-// text-white
-// py-4
-// rounded-xl
-// font-bold
-// "
-//           >
-//             {isLoading ? "Booking..." : "Confirm & Pay"}
-//           </button>
-//         </form>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default BookAppointment;
-
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -429,11 +130,7 @@ const BookAppointment = () => {
       if (!isSuccess || !appointment) return;
 
       try {
-        const order = await dispatch(
-          createPaymentOrder({
-            appointmentId: appointment._id,
-          })
-        ).unwrap();
+        const order = await dispatch(createPaymentOrder(appointment._id)).unwrap();
 
         await paymentService.openRazorpayCheckout({
           order,
@@ -636,49 +333,40 @@ const BookAppointment = () => {
                       </div>
 
                     ) : (
-
-                      <div className="grid md:grid-cols-3 gap-4">
+                      <select
+                        name="slot"
+                        value={form.slot}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            slot: e.target.value,
+                          })
+                        }
+                        className="
+    w-full
+    border
+    rounded-xl
+    px-5
+    py-4
+    bg-white
+    focus:ring-2
+    focus:ring-blue-500
+    outline-none
+  "
+                      >
+                        <option value="">
+                          Select Appointment Slot
+                        </option>
 
                         {availableSlots.map((slot) => (
-
-                          <button
-                            type="button"
+                          <option
                             key={slot.start}
-                            onClick={() =>
-                              setForm({
-                                ...form,
-                                slot: slot.start,
-                              })
-                            }
-                            className={`
-            border
-            rounded-xl
-            p-4
-            transition
-            ${form.slot === slot.start
-                                ? "bg-blue-600 text-white border-blue-600"
-                                : "hover:border-blue-500"
-                              }
-            `}
+                            value={slot.start}
                           >
-
-                            <p className="font-semibold">
-
-                              {slot.start}
-
-                            </p>
-
-                            <p className="text-sm mt-1">
-
-                              {slot.end}
-
-                            </p>
-
-                          </button>
-
+                            {slot.start} - {slot.end}
+                          </option>
                         ))}
-
-                      </div>
+                      </select>
 
                     )}
 

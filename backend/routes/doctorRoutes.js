@@ -8,6 +8,7 @@ import {
   getDoctorsByHospital,
   updateDoctor,
   deleteDoctor,
+  getTodayAppointments,
 } from "../controllers/doctorController.js";
 
 import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
@@ -73,6 +74,13 @@ router.post(
   createDoctor,
 );
 
+router.get(
+  "/my-appointments",
+  protect,
+  authorizeRoles("doctor"),
+  getTodayAppointments
+);
+
 // =================================
 // SINGLE DOCTOR DETAILS
 // keep below custom routes
@@ -115,5 +123,7 @@ router.delete(
 
   deleteDoctor,
 );
+
+
 
 export default router;
