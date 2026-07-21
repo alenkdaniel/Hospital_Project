@@ -11,11 +11,18 @@ import {
   cancelAppointment,
   rescheduleAppointment,
   deleteUnpaidAppointment,
+  completeConsultation,   
+  getConsultationHistory,
+  uploadConsultationAttachments,
 } from "../controllers/appointmentController.js";
 
 import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
 
 import { appointmentValidation } from "../middlewares/validationMiddleware.js";
+
+import { consultationValidation } from "../middlewares/consultationValidation.js";
+
+import upload from "../middlewares/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -158,6 +165,51 @@ router.patch(
   ),
 
   updateAppointmentStatus,
+);
+
+
+// =================================
+// COMPLETE CONSULTATION
+// Doctor
+// =================================
+
+router.patch(
+  "/:id/consultation",
+
+  protect,
+
+  authorizeRoles("doctor"),
+
+  consultationValidation,
+
+  completeConsultation,
+);
+
+// =================================
+// CONSULTATION HISTORY
+// PATIENT
+// =================================
+
+router.get(
+  "/my/history",
+
+  protect,
+
+  authorizeRoles("patient"),
+
+  getConsultationHistory,
+);
+
+router.patch(
+  "/:id/attachments",
+
+  protect,
+
+  authorizeRoles("doctor"),
+
+  upload.array("consultationAttachments", 10),
+
+  uploadConsultationAttachments,
 );
 
 // =================================

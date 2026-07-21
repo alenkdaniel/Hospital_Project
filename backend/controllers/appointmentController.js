@@ -6,18 +6,21 @@ import Doctor from "../models/Doctor.js";
 
 import { DAYS } from "../utils/constants.js";
 
-import {
-  generateAppointmentNumber,
-  // generateTokenNumber,
-  // calculateWaitingTime,
-} from "../utils/appointmentUtils.js";
+import { generateAppointmentNumber } from "../utils/appointmentUtils.js";
 
 import Hospital from "../models/Hospital.js";
 
 import sendEmail from "../services/emailService.js";
 
 import emailTemplate from "../templates/emailTemplate.js";
+
 import { convertTimeToMinutes } from "../utils/convertTime.js";
+
+import Medicine from "../models/Medicine.js";
+
+import MedicalTest from "../models/MedicalTest.js";
+
+import generatePrescriptionPdf from "../utils/generatePrescriptionPdf.js";
 
 // =================================
 // CREATE APPOINTMENT
@@ -223,13 +226,6 @@ export const createAppointment = async (req, res) => {
     // ======================================================
     // 10. Create Appointment
     // ======================================================
-
-    console.log("appointmentNumber:", appointmentNumber);
-    console.log("typeof:", typeof appointmentNumber);
-    console.log("consultationFee:", consultationFee);
-    console.log("slot:", slot);
-    console.log("hospital:", hospital);
-    console.log("doctor:", doctor);
 
     const appointment = await Appointment.create({
       patient: req.user._id,
@@ -911,6 +907,7 @@ export const getHospitalAppointments = async (req, res) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+
     const total = await Appointment.countDocuments({
       hospital: hospital._id,
     });
@@ -921,23 +918,23 @@ export const getHospitalAppointments = async (req, res) => {
       .populate("patient", "name email phone")
       .populate("doctor", "name specialization")
       .sort({
-        appointmentDate: -1,
-        "slot.start": 1,
+        createdAt: -1,
       })
-      .lean()
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
 
     return res.status(200).json({
       success: true,
+      appointments,
       page,
       limit,
       total,
       totalPages: Math.ceil(total / limit),
-      appointments,
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       message: error.message,
     });
   }
@@ -1319,6 +1316,641 @@ Current Status : ${status.replace("_", " ")}
   } catch (error) {
     res.status(500).json({
       message: error.message,
+    });
+  }
+};
+
+export const completeConsultation = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({
+      user: req.user._id,
+    })
+      .select("_id")
+      .lean();
+
+    // =================================
+    // CHECK DOCTOR PROFILE
+    // =================================
+
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor profile not found",
+      });
+    }
+
+    // =================================
+    // FIND APPOINTMENT
+    // =================================
+
+    const appointment = await Appointment.findById(req.params.id);
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
+    }
+
+    // =================================
+    // VERIFY DOCTOR OWNERSHIP
+    // =================================
+
+    if (!appointment.doctor.equals(doctor._id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    // =================================
+    // VALIDATE APPOINTMENT STATUS
+    // =================================
+
+    if (appointment.status !== "in_consultation") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Consultation can only be completed when the appointment is in consultation.",
+      });
+    }
+
+    // =================================
+    // GET CONSULTATION DATA
+    // =================================
+
+    const {
+      diagnosis,
+      medicines = [],
+      tests = [],
+      remarks,
+      followUpDate,
+    } = req.body;
+
+    // =================================
+    // VALIDATE DIAGNOSIS
+    // =================================
+
+    if (!diagnosis?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Diagnosis is required",
+      });
+    }
+
+    // =================================
+    // VALIDATE MEDICINES
+    // =================================
+
+    if (!Array.isArray(medicines)) {
+      return res.status(400).json({
+        success: false,
+        message: "Medicines must be an array",
+      });
+    }
+
+    // =================================
+    // VALIDATE TESTS
+    // =================================
+
+    if (!Array.isArray(tests)) {
+      return res.status(400).json({
+        success: false,
+        message: "Tests must be an array",
+      });
+    }
+
+    // =================================
+    // VERIFY MEDICINES
+    // =================================
+
+    if (medicines.length > 0) {
+      const medicineIds = medicines.map((item) => item.medicine);
+
+      const validMedicines = await Medicine.countDocuments({
+        _id: {
+          $in: medicineIds,
+        },
+      });
+
+      if (validMedicines !== medicineIds.length) {
+        return res.status(400).json({
+          success: false,
+          message: "One or more medicines are invalid",
+        });
+      }
+    }
+
+    // =================================
+    // VERIFY MEDICAL TESTS
+    // =================================
+
+    if (tests.length > 0) {
+      const testIds = tests.map((item) => item.test);
+
+      const validTests = await MedicalTest.countDocuments({
+        _id: {
+          $in: testIds,
+        },
+      });
+
+      if (validTests !== testIds.length) {
+        return res.status(400).json({
+          success: false,
+          message: "One or more medical tests are invalid",
+        });
+      }
+    }
+
+    // =================================
+    // UPDATE CONSULTATION
+    // =================================
+
+    appointment.consultation = {
+      diagnosis,
+
+      medicines,
+
+      tests,
+
+      remarks,
+
+      followUpDate,
+
+      consultationDate: new Date(),
+
+      completedAt: new Date(),
+
+      completedBy: doctor._id,
+
+      status: "completed",
+    };
+
+    // =================================
+    // UPDATE APPOINTMENT STATUS
+    // =================================
+
+    appointment.status = "completed";
+
+    // =================================
+    // UPDATE QUEUE
+    // =================================
+
+    appointment.queue.completedAt = new Date();
+
+    appointment.queue.queueStatus = "completed";
+
+    // =================================
+    // SAVE APPOINTMENT
+    // =================================
+
+    await appointment.save();
+
+    await appointment.populate([
+      {
+        path: "patient",
+        select: "name email",
+      },
+      {
+        path: "doctor",
+        select: "name",
+      },
+      {
+        path: "hospital",
+        select: "name",
+      },
+    ]);
+
+    try {
+      await sendEmail({
+        to: appointment.patient.email,
+
+        subject: "Consultation Completed",
+
+        html: emailTemplate({
+          title: "Consultation Completed",
+
+          greeting: appointment.patient.name,
+
+          message:
+            "Your consultation has been completed successfully. Below are the consultation details.",
+
+          details: `
+Doctor : Dr. ${appointment.doctor.name}<br/>
+Hospital : ${appointment.hospital.name}<br/>
+Diagnosis : ${diagnosis}<br/>
+Remarks : ${remarks || "N/A"}<br/>
+Follow-up Date : ${
+            followUpDate
+              ? new Date(followUpDate).toLocaleDateString()
+              : "Not Required"
+          }
+`,
+        }),
+      });
+    } catch (error) {}
+
+    // =================================
+    // SUCCESS RESPONSE
+    // =================================
+
+    return res.status(200).json({
+      success: true,
+
+      message: "Consultation completed successfully",
+
+      appointment,
+    });
+  } catch (error) {
+    console.error("COMPLETE CONSULTATION ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to complete consultation",
+    });
+  }
+};
+
+// ======================================
+// GET PRESCRIPTION
+// ======================================
+
+export const getPrescription = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const appointment = await Appointment.findById(id)
+      .populate("patient", "name email phone gender image")
+      .populate("doctor", "name specialization qualification")
+      .populate("hospital", "name address contact")
+      .populate(
+        "consultation.medicines.medicine",
+        "name genericName dosageForm strength",
+      )
+      .populate("consultation.tests.test", "name category preparation");
+
+    // ======================================
+    // CHECK APPOINTMENT
+    // ======================================
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
+    }
+
+    // ======================================
+    // CHECK CONSULTATION STATUS
+    // ======================================
+
+    if (appointment.consultation.status !== "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Consultation is not completed yet",
+      });
+    }
+
+    // ======================================
+    // AUTHORIZATION
+    // ======================================
+
+    switch (req.user.role) {
+      // ============================
+      // PATIENT
+      // ============================
+
+      case "patient":
+        if (!appointment.patient._id.equals(req.user._id)) {
+          return res.status(403).json({
+            success: false,
+            message: "Unauthorized to view this prescription",
+          });
+        }
+
+        break;
+
+      // ============================
+      // DOCTOR
+      // ============================
+
+      case "doctor": {
+        const doctor = await Doctor.findOne({
+          user: req.user._id,
+        }).select("_id");
+
+        if (!doctor || !appointment.doctor._id.equals(doctor._id)) {
+          return res.status(403).json({
+            success: false,
+            message: "Unauthorized to view this prescription",
+          });
+        }
+
+        break;
+      }
+
+      // ============================
+      // HOSPITAL ADMIN
+      // ============================
+
+      case "hospital_admin": {
+        const hospital = await Hospital.findOne({
+          createdBy: req.user._id,
+        }).select("_id");
+
+        if (!hospital || !appointment.hospital._id.equals(hospital._id)) {
+          return res.status(403).json({
+            success: false,
+            message: "Unauthorized to view this prescription",
+          });
+        }
+
+        break;
+      }
+
+      // ============================
+      // SUPER ADMIN
+      // ============================
+
+      case "super_admin":
+        break;
+
+      // ============================
+      // INVALID ROLE
+      // ============================
+
+      default:
+        return res.status(403).json({
+          success: false,
+          message: "Access denied",
+        });
+    }
+
+    // ======================================
+    // PRESCRIPTION RESPONSE
+    // ======================================
+
+    const prescription = {
+      appointmentNumber: appointment.booking.appointmentNumber,
+
+      appointmentDate: appointment.appointmentDate,
+
+      patient: appointment.patient,
+
+      doctor: appointment.doctor,
+
+      hospital: appointment.hospital,
+
+      diagnosis: appointment.consultation.diagnosis,
+
+      medicines: appointment.consultation.medicines,
+
+      tests: appointment.consultation.tests,
+
+      remarks: appointment.consultation.remarks,
+
+      followUpDate: appointment.consultation.followUpDate,
+
+      consultationDate: appointment.consultation.consultationDate,
+    };
+
+    // ======================================
+    // SUCCESS RESPONSE
+    // ======================================
+
+    return res.status(200).json({
+      success: true,
+
+      message: "Prescription fetched successfully",
+
+      prescription,
+    });
+  } catch (error) {
+    console.error("GET PRESCRIPTION ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch prescription",
+    });
+  }
+};
+
+// ======================================
+// GET CONSULTATION HISTORY
+// ======================================
+
+export const getConsultationHistory = async (req, res) => {
+  try {
+    const appointments = await Appointment.find({
+      patient: req.user._id,
+
+      status: "completed",
+    })
+      .populate("doctor", "name specialization qualification image")
+
+      .populate("hospital", "name address contact")
+
+      .populate(
+        "consultation.medicines.medicine",
+        "name genericName dosageForm strength",
+      )
+
+      .populate("consultation.tests.test", "name category")
+
+      .sort({
+        appointmentDate: -1,
+      });
+    // ======================================
+    // CHECK HISTORY
+    // ======================================
+
+    if (appointments.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No consultation history found",
+        history: [],
+      });
+    }
+
+    // ======================================
+    // FORMAT HISTORY
+    // ======================================
+
+    const history = appointments.map((appointment) => ({
+      appointmentId: appointment._id,
+
+      appointmentNumber: appointment.booking.appointmentNumber,
+
+      appointmentDate: appointment.appointmentDate,
+
+      doctor: appointment.doctor,
+
+      hospital: appointment.hospital,
+
+      diagnosis: appointment.consultation.diagnosis,
+
+      medicines: appointment.consultation.medicines,
+
+      tests: appointment.consultation.tests,
+
+      remarks: appointment.consultation.remarks,
+
+      followUpDate: appointment.consultation.followUpDate,
+
+      consultationDate: appointment.consultation.consultationDate,
+    }));
+    // ======================================
+    // SUCCESS RESPONSE
+    // ======================================
+
+    return res.status(200).json({
+      success: true,
+
+      count: history.length,
+
+      history,
+    });
+  } catch (error) {
+    console.error("GET CONSULTATION HISTORY ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch consultation history",
+    });
+  }
+};
+
+export const uploadConsultationAttachments = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({
+      user: req.user._id,
+    })
+      .select("_id")
+      .lean();
+
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor profile not found",
+      });
+    }
+    // =================================
+    // FIND APPOINTMENT
+    // =================================
+
+    const appointment = await Appointment.findById(req.params.id);
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
+    }
+    // =================================
+    // VERIFY DOCTOR
+    // =================================
+
+    if (!appointment.doctor.equals(doctor._id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    // =================================
+    // VALIDATE CONSULTATION
+    // =================================
+
+    if (appointment.consultation.status !== "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Complete the consultation before uploading attachments.",
+      });
+    }
+
+    // =================================
+    // CHECK FILES
+    // =================================
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload at least one attachment",
+      });
+    }
+    // =================================
+    // PREPARE ATTACHMENTS
+    // =================================
+
+    const attachments = req.files.map((file) => ({
+      fileName: file.originalname,
+
+      fileUrl: file.path,
+
+      fileType: req.body.fileType || "other",
+
+      uploadedBy: doctor._id,
+
+      uploadedAt: new Date(),
+    }));
+    // =================================
+    // SAVE ATTACHMENTS
+    // =================================
+
+    appointment.consultation.attachments.push(...attachments);
+
+    await appointment.save();
+    // =================================
+    // SUCCESS RESPONSE
+    // =================================
+
+    return res.status(200).json({
+      success: true,
+
+      message: "Attachments uploaded successfully",
+
+      attachments: appointment.consultation.attachments,
+    });
+  } catch (error) {
+    console.error("UPLOAD ATTACHMENTS ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to upload attachments",
+    });
+  }
+};
+
+export const downloadPrescriptionPdf = async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id)
+      .populate("patient", "name email phone gender image")
+      .populate("doctor", "name specialization qualification")
+      .populate("hospital", "name address contact")
+      .populate(
+        "consultation.medicines.medicine",
+        "name genericName dosageForm strength",
+      )
+      .populate("consultation.tests.test", "name category preparation");
+
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
+    }
+
+    if (appointment.consultation.status !== "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Complete the consultation before uploading attachments.",
+      });
+    }
+  } catch (error) {
+    console.error("DOWNLOAD PRESCRIPTION PDF ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to download prescription",
     });
   }
 };

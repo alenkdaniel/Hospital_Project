@@ -79,14 +79,6 @@ export const register = async (req, res) => {
 
     const otp = generateOTP();
 
-    // const accessToken = generateAccessToken(user._id);
-
-    // const refreshToken = generateRefreshToken(user._id);
-
-    // user.refreshToken = refreshToken;
-
-    // await user.save();
-
     // SEND EMAIL OTP
 
     const emailResult = await sendEmail({
@@ -121,21 +113,6 @@ export const register = async (req, res) => {
     await user.save();
 
     res.status(201).json({
-      // _id: user._id,
-
-      // name: user.name,
-
-      // email: user.email,
-
-      // role: user.role,
-
-      // accountStatus: user.accountStatus,
-
-      // image: user.image,
-
-      // accessToken,
-
-      // refreshToken,
       success: true,
       message: "Registration successful. Please verify your email.",
       email: user.email,

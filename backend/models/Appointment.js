@@ -271,14 +271,33 @@ completedAt: {
 attachments: {
   type: [
     {
-      url: {
+      fileName: {
         type: String,
         trim: true,
       },
 
-      name: {
+      fileUrl: {
         type: String,
         trim: true,
+      },
+
+      fileType: {
+        type: String,
+        enum: [
+          "xray",
+          "blood_report",
+          "ecg",
+          "mri",
+          "ct_scan",
+          "prescription",
+          "other",
+        ],
+        default: "other",
+      },
+
+      uploadedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Doctor",
       },
 
       uploadedAt: {

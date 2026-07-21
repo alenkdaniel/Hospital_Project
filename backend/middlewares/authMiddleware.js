@@ -19,7 +19,7 @@ export const protect = async (req, res, next) => {
         message: "No token provided",
       });
     }
-console.log("Authorization Header:", req.headers.authorization);
+// console.log("Authorization Header:", req.headers.authorization);
 
     const decoded = jwt.verify(
       token,
@@ -27,7 +27,7 @@ console.log("Authorization Header:", req.headers.authorization);
       process.env.JWT_ACCESS_SECRET,
     );
 
- console.log("Decoded Token:", decoded);
+//  console.log("Decoded Token:", decoded);
 
     const user = await User.findById(decoded.id);
 

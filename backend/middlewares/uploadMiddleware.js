@@ -34,6 +34,10 @@ const storage = new CloudinaryStorage({
       folder = "healthcare/certificates";
     }
 
+    if (file.fieldname === "consultationAttachments") {
+      folder = "healthcare/consultations";
+    }
+
     // ===============================
     // PDF SUPPORT
     // ===============================
