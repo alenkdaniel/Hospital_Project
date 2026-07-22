@@ -112,6 +112,21 @@ export const register = async (req, res) => {
 
     await user.save();
 
+
+    if(user.role === "patient"){
+      const confirmUser = await sendEmail({
+      to:user.email,
+      subject : `Our new user`,
+      html: emailTemplate({
+        title: "Welcome ${user.name}",
+
+        greeting: user.name,
+
+        message: "This is for our  new pateint greetings",
+      }),
+    })
+    }
+
     res.status(201).json({
       success: true,
       message: "Registration successful. Please verify your email.",

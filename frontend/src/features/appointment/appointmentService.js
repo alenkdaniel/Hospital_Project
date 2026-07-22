@@ -45,7 +45,11 @@ const getAppointmentById = async (id) => {
 // =====================================
 
 const getHospitalAppointments = async () => {
-  const response = await API.get("/appointments/hospital");
+  const response = await API.get("/appointments/hospital", {
+    params: {
+      limit: 100,
+    },
+  });
 
   return response.data;
 };
@@ -57,7 +61,11 @@ const getHospitalAppointments = async () => {
 // =====================================
 
 const getDoctorAppointments = async () => {
-  const response = await API.get("/appointments/doctor");
+  const response = await API.get("/appointments/doctor", {
+    params: {
+      limit: 100,
+    },
+  });
 
   return response.data;
 };

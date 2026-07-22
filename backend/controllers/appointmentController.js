@@ -980,8 +980,7 @@ export const getDoctorAppointments = async (req, res) => {
     })
       .populate("patient", "name email phone image")
       .sort({
-        appointmentDate: 1,
-        "slot.start": 1,
+        createdAt: -1,
       })
       .lean()
       .skip(skip)

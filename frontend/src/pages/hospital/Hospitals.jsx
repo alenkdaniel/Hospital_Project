@@ -80,28 +80,6 @@ const Hospitals = () => {
       return;
     }
 
-    useEffect(() => {
-      dispatch(
-        searchHospitals({
-          search,
-          city,
-          rating,
-          emergency,
-          icu,
-          acceptingPatients,
-          distance,
-        })
-      );
-
-      setCurrentPage(1);
-
-    }, [
-      rating,
-      emergency,
-      icu,
-      acceptingPatients,
-      distance,
-    ]);
     const searchPlaces = async () => {
 
       try {
