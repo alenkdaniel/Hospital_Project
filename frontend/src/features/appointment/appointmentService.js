@@ -131,6 +131,53 @@ const getAvailableSlots = async (doctorId, date) => {
 };
 
 // =====================================
+// COMPLETE CONSULTATION
+//
+// Doctor adds diagnosis, medicines, tests
+// and remarks, appointment -> completed
+// =====================================
+
+const completeConsultation = async (id, data) => {
+  const response = await API.patch(`/appointments/${id}/consultation`, data);
+
+  return response.data;
+};
+
+// =====================================
+// GET CONSULTATION HISTORY
+//
+// Patient
+// =====================================
+
+const getConsultationHistory = async () => {
+  const response = await API.get("/appointments/my/history");
+
+  return response.data;
+};
+
+// =====================================
+// UPLOAD CONSULTATION ATTACHMENTS
+//
+// Doctor
+// =====================================
+
+const uploadConsultationAttachments = async (id, formData) => {
+  const response = await API.patch(
+    `/appointments/${id}/attachments`,
+
+    formData,
+
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+
+  return response.data;
+};
+
+// =====================================
 // EXPORT SERVICE
 // =====================================
 
@@ -152,6 +199,12 @@ const appointmentService = {
   updateAppointmentStatus,
 
   getAvailableSlots,
+
+  completeConsultation,
+
+  getConsultationHistory,
+
+  uploadConsultationAttachments,
 };
 
 export default appointmentService;

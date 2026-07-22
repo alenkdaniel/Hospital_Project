@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useDispatch, useSelector } from "react-redux";
 
@@ -12,10 +12,18 @@ import { motion } from "framer-motion";
 
 import toast from "react-hot-toast";
 
+import ConsultationModal from "../../components/doctor/ConsultationModal";
+
 const DoctorDashboard = () => {
   const dispatch = useDispatch();
 
   const { user } = useSelector((state) => state.auth);
+
+  // =====================================
+  // CONSULTATION MODAL
+  // =====================================
+
+  const [consultationAppointment, setConsultationAppointment] = useState(null);
 
   const {
     doctorAppointments,
@@ -443,10 +451,59 @@ disabled:cursor-not-allowed
 
                 <option value="no_show">No Show</option>
               </select>
+
+              {/* CONSULTATION */}
+
+              {item.status === "in_consultation" && (
+                <button
+                  onClick={() => setConsultationAppointment(item)}
+                  className="
+mt-3
+w-full
+bg-gradient-to-r
+from-blue-600
+to-cyan-500
+text-white
+font-semibold
+py-3
+rounded-xl
+hover:opacity-90
+"
+                >
+                  🩺 Start Consultation
+                </button>
+              )}
+
+              {item.status === "completed" && item.consultation?.diagnosis && (
+                <button
+                  onClick={() => setConsultationAppointment(item)}
+                  className="
+mt-3
+w-full
+bg-gray-100
+text-blue-600
+font-semibold
+py-3
+rounded-xl
+hover:bg-gray-200
+"
+                >
+                  📋 View Consultation
+                </button>
+              )}
             </div>
           </motion.div>
         ))}
       </div>
+
+      {/* CONSULTATION MODAL */}
+
+      {consultationAppointment && (
+        <ConsultationModal
+          appointment={consultationAppointment}
+          onClose={() => setConsultationAppointment(null)}
+        />
+      )}
     </div>
   );
 };

@@ -329,6 +329,109 @@ p-8
           </div>
         </motion.div>
 
+        {/* Consultation Report */}
+
+        {appointment.consultation?.status === "completed" && (
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            className="
+bg-white
+rounded-3xl
+shadow-xl
+p-8
+md:col-span-2
+"
+          >
+            <h2 className="text-2xl font-bold mb-6">
+              📋 Consultation Report
+            </h2>
+
+            <div className="space-y-5">
+              <div>
+                <p className="font-semibold">Diagnosis :</p>
+
+                <p className="text-gray-600 mt-1">
+                  {appointment.consultation?.diagnosis || "N/A"}
+                </p>
+              </div>
+
+              <div>
+                <p className="font-semibold mb-2">Medicines :</p>
+
+                {appointment.consultation?.medicines?.length > 0 ? (
+                  <div className="space-y-2">
+                    {appointment.consultation.medicines.map((item, index) => (
+                      <div
+                        key={index}
+                        className="bg-gray-50 rounded-xl p-4 text-sm text-gray-600"
+                      >
+                        <p className="font-semibold text-gray-800">
+                          💊 {item.medicine?.name || "Medicine"}
+                        </p>
+
+                        <p>
+                          {item.dosage && `Dosage: ${item.dosage} `}
+                          {item.frequency && `· Frequency: ${item.frequency} `}
+                          {item.duration && `· Duration: ${item.duration}`}
+                        </p>
+
+                        {item.instructions && (
+                          <p className="mt-1">Instructions: {item.instructions}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No medicines prescribed</p>
+                )}
+              </div>
+
+              <div>
+                <p className="font-semibold mb-2">Recommended Tests :</p>
+
+                {appointment.consultation?.tests?.length > 0 ? (
+                  <div className="space-y-2">
+                    {appointment.consultation.tests.map((item, index) => (
+                      <div
+                        key={index}
+                        className="bg-gray-50 rounded-xl p-4 text-sm text-gray-600"
+                      >
+                        <p className="font-semibold text-gray-800">
+                          🧪 {item.test?.name || "Test"}
+                        </p>
+
+                        {item.notes && <p className="mt-1">Notes: {item.notes}</p>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No tests recommended</p>
+                )}
+              </div>
+
+              <div>
+                <p className="font-semibold">Doctor's Remarks :</p>
+
+                <p className="text-gray-600 mt-1">
+                  {appointment.consultation?.remarks || "N/A"}
+                </p>
+              </div>
+
+              <div>
+                <p className="font-semibold">Follow-up Date :</p>
+
+                <p className="text-gray-600 mt-1">
+                  {appointment.consultation?.followUpDate
+                    ? new Date(
+                        appointment.consultation.followUpDate
+                      ).toLocaleDateString()
+                    : "Not Required"}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Payment Card */}
 
         <motion.div

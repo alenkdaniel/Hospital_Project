@@ -313,6 +313,11 @@ export const getAppointmentById = async (req, res) => {
       .populate("patient", "name email phone image")
       .populate("hospital", "name address contact")
       .populate("doctor", "name specialization image consultationFee email")
+      .populate(
+        "consultation.medicines.medicine",
+        "name genericName dosageForm strength",
+      )
+      .populate("consultation.tests.test", "name category preparation")
       .lean();
     if (!appointment) {
       return res.status(404).json({
@@ -979,6 +984,11 @@ export const getDoctorAppointments = async (req, res) => {
       doctor: doctorId,
     })
       .populate("patient", "name email phone image")
+      .populate(
+        "consultation.medicines.medicine",
+        "name genericName dosageForm strength",
+      )
+      .populate("consultation.tests.test", "name category preparation")
       .sort({
         createdAt: -1,
       })
@@ -1517,6 +1527,14 @@ export const completeConsultation = async (req, res) => {
       {
         path: "hospital",
         select: "name",
+      },
+      {
+        path: "consultation.medicines.medicine",
+        select: "name genericName dosageForm strength",
+      },
+      {
+        path: "consultation.tests.test",
+        select: "name category preparation",
       },
     ]);
 

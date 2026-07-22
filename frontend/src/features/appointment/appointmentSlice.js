@@ -178,6 +178,23 @@ export const getAvailableSlots = createAsyncThunk(
 );
 
 // =====================================
+// COMPLETE CONSULTATION
+// Doctor
+// =====================================
+
+export const completeConsultation = createAsyncThunk(
+  "appointment/completeConsultation",
+
+  async ({ id, data }, thunkAPI) => {
+    try {
+      return await appointmentService.completeConsultation(id, data);
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+// =====================================
 // SLICE
 // =====================================
 
@@ -499,6 +516,60 @@ const appointmentSlice = createSlice({
 
       .addCase(
         updateAppointmentStatus.rejected,
+
+        (state, action) => {
+          state.isLoading = false;
+
+          state.isError = true;
+
+          state.message = action.payload;
+        },
+      )
+
+      // =========================
+      // COMPLETE CONSULTATION
+      // =========================
+
+      .addCase(
+        completeConsultation.pending,
+
+        (state) => {
+          state.isLoading = true;
+
+          state.isError = false;
+
+          state.message = "";
+        },
+      )
+
+      .addCase(
+        completeConsultation.fulfilled,
+
+        (state, action) => {
+          state.isLoading = false;
+
+          state.isSuccess = true;
+
+          const updated = action.payload.appointment;
+
+          state.appointment = updated;
+
+          state.appointments = state.appointments.map((item) =>
+            item._id === updated._id ? updated : item,
+          );
+
+          state.hospitalAppointments = state.hospitalAppointments.map((item) =>
+            item._id === updated._id ? updated : item,
+          );
+
+          state.doctorAppointments = state.doctorAppointments.map((item) =>
+            item._id === updated._id ? updated : item,
+          );
+        },
+      )
+
+      .addCase(
+        completeConsultation.rejected,
 
         (state, action) => {
           state.isLoading = false;
