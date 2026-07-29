@@ -1962,6 +1962,7 @@ export const downloadPrescriptionPdf = async (req, res) => {
         message: "Complete the consultation before uploading attachments.",
       });
     }
+    
   } catch (error) {
     console.error("DOWNLOAD PRESCRIPTION PDF ERROR:", error);
 

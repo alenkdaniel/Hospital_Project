@@ -6,9 +6,49 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import toast from "react-hot-toast";
 
-import medicalTestService from "../../features/medicine/Medicineservice ";
+import medicineService from "../../features/medicine/Medicineservice ";
+
+import medicalTestService from "../../features/medicalTest/medicalTestService";
 
 import { completeConsultation } from "../../features/appointment/appointmentSlice";
+
+// =====================================
+// PRESCRIPTION TIMING SLOTS
+//
+// Classic "1-0-1" style dosage timing
+// used on a real prescription.
+// =====================================
+
+const TIMING_SLOTS = [
+  { key: "morning", label: "Morning" },
+  { key: "afternoon", label: "Afternoon" },
+  { key: "night", label: "Night" },
+];
+
+const MEAL_OPTIONS = [
+  { key: "before", label: "Before Food" },
+  { key: "after", label: "After Food" },
+];
+
+// Builds the "1-0-1" style frequency code from the selected timing slots.
+
+const buildFrequencyCode = (timing) =>
+  TIMING_SLOTS.map((slot) => (timing[slot.key] ? "1" : "0")).join("-");
+
+// Parses a stored "1-0-1" code (or free text) back into timing booleans.
+// Falls back to all-false if the value isn't in the expected format.
+
+const parseFrequencyCode = (frequency) => {
+  const parts = (frequency || "").split("-");
+
+  const timing = {};
+
+  TIMING_SLOTS.forEach((slot, index) => {
+    timing[slot.key] = parts[index] === "1";
+  });
+
+  return timing;
+};
 
 // =====================================
 // CONSULTATION MODAL
@@ -48,6 +88,8 @@ const ConsultationModal = ({ appointment, onClose }) => {
       name: item.medicine?.name || "Medicine",
       dosage: item.dosage || "",
       frequency: item.frequency || "",
+      timing: parseFrequencyCode(item.frequency),
+      mealTiming: item.mealTiming || "",
       duration: item.duration || "",
       instructions: item.instructions || "",
     })),
@@ -111,8 +153,10 @@ const ConsultationModal = ({ appointment, onClose }) => {
       {
         medicine: item._id,
         name: item.name,
-        dosage: "",
+        dosage: item.strength || "",
         frequency: "",
+        timing: { morning: false, afternoon: false, night: false },
+        mealTiming: "",
         duration: "",
         instructions: "",
       },
@@ -138,6 +182,41 @@ const ConsultationModal = ({ appointment, onClose }) => {
 
   const removeMedicine = (index) => {
     setMedicines((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Toggles a Morning / Afternoon / Night slot and keeps the
+  // "1-0-1" style frequency code in sync with it.
+
+  const toggleMedicineTiming = (index, slotKey) => {
+    setMedicines((prev) =>
+      prev.map((item, i) => {
+        if (i !== index) return item;
+
+        const timing = {
+          ...item.timing,
+          [slotKey]: !item.timing?.[slotKey],
+        };
+
+        return {
+          ...item,
+          timing,
+          frequency: buildFrequencyCode(timing),
+        };
+      }),
+    );
+  };
+
+  const setMedicineMealTiming = (index, mealKey) => {
+    setMedicines((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              mealTiming: item.mealTiming === mealKey ? "" : mealKey,
+            }
+          : item,
+      ),
+    );
   };
 
   // =====================================
@@ -232,6 +311,7 @@ const ConsultationModal = ({ appointment, onClose }) => {
         medicine: item.medicine,
         dosage: item.dosage,
         frequency: item.frequency,
+        mealTiming: item.mealTiming,
         duration: item.duration,
         instructions: item.instructions,
       })),
@@ -396,20 +476,12 @@ const ConsultationModal = ({ appointment, onClose }) => {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       <input
                         disabled={isReadOnly}
                         value={item.dosage}
                         onChange={(e) => updateMedicineField(index, "dosage", e.target.value)}
                         placeholder="Dosage (e.g. 500mg)"
-                        className="bg-white disabled:bg-gray-100 rounded-lg p-2 text-sm outline-none border"
-                      />
-
-                      <input
-                        disabled={isReadOnly}
-                        value={item.frequency}
-                        onChange={(e) => updateMedicineField(index, "frequency", e.target.value)}
-                        placeholder="Frequency (e.g. 1-0-1)"
                         className="bg-white disabled:bg-gray-100 rounded-lg p-2 text-sm outline-none border"
                       />
 
@@ -425,9 +497,63 @@ const ConsultationModal = ({ appointment, onClose }) => {
                         disabled={isReadOnly}
                         value={item.instructions}
                         onChange={(e) => updateMedicineField(index, "instructions", e.target.value)}
-                        placeholder="Instructions (e.g. after food)"
+                        placeholder="Special instructions"
                         className="bg-white disabled:bg-gray-100 rounded-lg p-2 text-sm outline-none border"
                       />
+                    </div>
+
+                    {/* PRESCRIPTION TIMING — Morning / Afternoon / Night */}
+
+                    <div className="mt-3 flex flex-wrap items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-500">
+                          Timing:
+                        </span>
+
+                        {TIMING_SLOTS.map((slot) => (
+                          <button
+                            key={slot.key}
+                            type="button"
+                            disabled={isReadOnly}
+                            onClick={() => toggleMedicineTiming(index, slot.key)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                              item.timing?.[slot.key]
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-gray-500 border-gray-300"
+                            } disabled:opacity-60`}
+                          >
+                            {slot.label}
+                          </button>
+                        ))}
+
+                        {item.frequency && (
+                          <span className="text-xs text-gray-400 font-mono">
+                            ({item.frequency})
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-500">
+                          Food:
+                        </span>
+
+                        {MEAL_OPTIONS.map((meal) => (
+                          <button
+                            key={meal.key}
+                            type="button"
+                            disabled={isReadOnly}
+                            onClick={() => setMedicineMealTiming(index, meal.key)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                              item.mealTiming === meal.key
+                                ? "bg-cyan-600 text-white border-cyan-600"
+                                : "bg-white text-gray-500 border-gray-300"
+                            } disabled:opacity-60`}
+                          >
+                            {meal.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ))}

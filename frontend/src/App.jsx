@@ -78,6 +78,8 @@ import Doctors from "./pages/hospital/Doctors";
 
 import AddDoctor from "./pages/hospital/AddDoctor";
 
+import ManageMedicines from "./pages/hospital/ManageMedicines";
+
 import DoctorDashboard from "./pages/doctor/DoctorDashboard";
 
 import SetPassword from "./pages/auth/SetPassword";
@@ -283,6 +285,15 @@ HOSPITAL ADMIN
           element={
             <ProtectedRoute allowedRoles={["hospital_admin"]}>
               <HospitalAppointments />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/hospital/medicines"
+          element={
+            <ProtectedRoute allowedRoles={["hospital_admin"]}>
+              <ManageMedicines />
             </ProtectedRoute>
           }
         />
