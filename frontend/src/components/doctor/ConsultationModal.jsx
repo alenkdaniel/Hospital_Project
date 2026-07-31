@@ -511,6 +511,16 @@ const ConsultationModal = ({ appointment, onClose }) => {
                       ).toLocaleDateString()}
                       ): {patientHistory[0].diagnosis}
                     </p>
+
+                    {patientHistory[0].tests?.length > 0 && (
+                      <p className="text-amber-700 text-sm mt-1">
+                        Tests already done:{" "}
+                        {patientHistory[0].tests
+                          .map((t) => t.test?.name)
+                          .filter(Boolean)
+                          .join(", ")}
+                      </p>
+                    )}
                   </div>
 
                   <span className="text-amber-600 font-semibold text-sm shrink-0 ml-4">
@@ -540,6 +550,16 @@ const ConsultationModal = ({ appointment, onClose }) => {
                             Medicines:{" "}
                             {visit.medicines
                               .map((m) => m.medicine?.name)
+                              .filter(Boolean)
+                              .join(", ")}
+                          </p>
+                        )}
+
+                        {visit.tests?.length > 0 && (
+                          <p className="text-gray-500 mt-1">
+                            Tests:{" "}
+                            {visit.tests
+                              .map((t) => t.test?.name)
                               .filter(Boolean)
                               .join(", ")}
                           </p>

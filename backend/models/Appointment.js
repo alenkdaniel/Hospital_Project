@@ -372,6 +372,16 @@ consultationDate: {
         sentAt: Date,
       },
 
+      // Same-day reminder sent shortly before
+      // the consultation is due to start.
+      sameDay: {
+        sent: {
+          type: Boolean,
+          default: false,
+        },
+        sentAt: Date,
+      },
+
       cancellation: {
         sent: {
           type: Boolean,

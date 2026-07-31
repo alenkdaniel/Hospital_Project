@@ -1266,6 +1266,16 @@ export const updateAppointmentStatus = async (req, res) => {
       appointment.confirmation.confirmedBy = req.user._id;
 
       appointment.confirmation.confirmedAt = new Date();
+
+      // Reset reminder flags on (re)confirmation so a
+      // rescheduled appointment gets fresh reminders
+      // instead of being silently skipped by the cron jobs.
+
+      appointment.notifications.reminder.sent = false;
+      appointment.notifications.reminder.sentAt = undefined;
+
+      appointment.notifications.sameDay.sent = false;
+      appointment.notifications.sameDay.sentAt = undefined;
     }
 
     if (status === "rejected") {

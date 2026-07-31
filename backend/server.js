@@ -8,6 +8,8 @@ import connectDB from "./config/db.js";
 
 import startAppointmentReminderCron from "./cron/appointmentReminder.js";
 
+import startSameDayReminderCron from "./cron/sameDayReminder.js";
+
 // ⭐ ADD THIS
 import { checkCloudinaryConnection } from "./config/cloudinary.js";
 
@@ -157,4 +159,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   startAppointmentReminderCron();
+  startSameDayReminderCron();
 });
