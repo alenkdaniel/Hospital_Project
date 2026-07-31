@@ -299,6 +299,20 @@ rounded-xl
             >
               💊 Manage Medicines
             </Link>
+
+            <Link
+              to="/hospital/tests"
+              className="
+inline-block
+bg-purple-600
+text-white
+px-8
+py-4
+rounded-xl
+"
+            >
+              🧪 Manage Tests
+            </Link>
           </div>
         </>
       ) : (

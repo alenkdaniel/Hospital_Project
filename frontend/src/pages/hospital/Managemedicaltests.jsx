@@ -6,46 +6,27 @@ import { motion } from "framer-motion";
 
 import toast from "react-hot-toast";
 
-import medicineService from "../../features/medicine/Medicineservice ";
-
-// =====================================
-// DOSAGE FORM OPTIONS
-// =====================================
-
-const DOSAGE_FORMS = [
-  "Tablet",
-  "Capsule",
-  "Syrup",
-  "Injection",
-  "Cream",
-  "Drops",
-  "Inhaler",
-  "Ointment",
-  "Powder",
-  "Other",
-];
+import medicalTestService from "../../features/medicalTest/medicalTestService";
 
 const EMPTY_FORM = {
   name: "",
-  genericName: "",
-  brandName: "",
   category: "",
-  dosageForm: "Tablet",
-  strength: "",
-  manufacturer: "",
+  description: "",
+  preparation: "",
+  price: "",
 };
 
 // =====================================
-// MANAGE MEDICINES
+// MANAGE MEDICAL TESTS
 //
-// Hospital Admin adds medicines to the
-// hospital's medicine catalog. Doctors
-// then search this catalog while writing
-// a prescription during consultation.
+// Hospital Admin adds tests to the
+// hospital's test catalog. Doctors then
+// pick from this catalog while ordering
+// tests during consultation.
 // =====================================
 
-const ManageMedicines = () => {
-  const [medicines, setMedicines] = useState([]);
+const ManageMedicalTests = () => {
+  const [tests, setTests] = useState([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -60,29 +41,29 @@ const ManageMedicines = () => {
   const [showForm, setShowForm] = useState(false);
 
   // "active" = normal catalog, "inactive" = removed
-  // medicines, so a hospital admin can restore one
-  // that was removed by mistake.
+  // tests, so a hospital admin can restore one that
+  // was removed by mistake.
 
   const [statusTab, setStatusTab] = useState("active");
 
   // =====================================
-  // LOAD MEDICINES
+  // LOAD TESTS
   // =====================================
 
-  const loadMedicines = useCallback(async (keyword = "", status = "active") => {
+  const loadTests = useCallback(async (keyword = "", status = "active") => {
     setLoading(true);
 
     try {
-      const response = await medicineService.getMedicines({
+      const response = await medicalTestService.getMedicalTests({
         search: keyword,
         status,
         limit: 100,
       });
 
-      setMedicines(response.medicines || []);
+      setTests(response.medicalTests || []);
     } catch (error) {
       toast.error(
-        error?.response?.data?.message || "Failed to load medicines",
+        error?.response?.data?.message || "Failed to load tests",
       );
     } finally {
       setLoading(false);
@@ -90,13 +71,13 @@ const ManageMedicines = () => {
   }, []);
 
   useEffect(() => {
-    loadMedicines(search.trim(), statusTab);
+    loadTests(search.trim(), statusTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusTab]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadMedicines(search.trim(), statusTab);
+      loadTests(search.trim(), statusTab);
     }, 350);
 
     return () => clearTimeout(timer);
@@ -122,18 +103,16 @@ const ManageMedicines = () => {
     setShowForm(true);
   };
 
-  const openEditForm = (medicine) => {
+  const openEditForm = (test) => {
     setForm({
-      name: medicine.name || "",
-      genericName: medicine.genericName || "",
-      brandName: medicine.brandName || "",
-      category: medicine.category || "",
-      dosageForm: medicine.dosageForm || "Tablet",
-      strength: medicine.strength || "",
-      manufacturer: medicine.manufacturer || "",
+      name: test.name || "",
+      category: test.category || "",
+      description: test.description || "",
+      preparation: test.preparation || "",
+      price: test.price ?? "",
     });
 
-    setEditingId(medicine._id);
+    setEditingId(test._id);
     setShowForm(true);
   };
 
@@ -147,7 +126,7 @@ const ManageMedicines = () => {
     e.preventDefault();
 
     if (!form.name.trim()) {
-      toast.error("Medicine name is required");
+      toast.error("Test name is required");
       return;
     }
 
@@ -155,51 +134,51 @@ const ManageMedicines = () => {
 
     try {
       if (editingId) {
-        await medicineService.updateMedicine(editingId, form);
-        toast.success("Medicine updated successfully");
+        await medicalTestService.updateMedicalTest(editingId, form);
+        toast.success("Test updated successfully");
       } else {
-        await medicineService.createMedicine(form);
-        toast.success("Medicine added successfully");
+        await medicalTestService.createMedicalTest(form);
+        toast.success("Test added successfully");
       }
 
       closeForm();
-      loadMedicines(search.trim());
+      loadTests(search.trim(), statusTab);
     } catch (error) {
       toast.error(
         error?.response?.data?.message ||
-          (editingId ? "Failed to update medicine" : "Failed to add medicine"),
+          (editingId ? "Failed to update test" : "Failed to add test"),
       );
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (medicine) => {
-    if (!window.confirm(`Remove "${medicine.name}" from the catalog?`)) {
+  const handleDelete = async (test) => {
+    if (!window.confirm(`Remove "${test.name}" from the catalog?`)) {
       return;
     }
 
     try {
-      await medicineService.deleteMedicine(medicine._id);
-      toast.success("Medicine removed");
-      loadMedicines(search.trim(), statusTab);
+      await medicalTestService.deleteMedicalTest(test._id);
+      toast.success("Test removed");
+      loadTests(search.trim(), statusTab);
     } catch (error) {
       toast.error(
-        error?.response?.data?.message || "Failed to remove medicine",
+        error?.response?.data?.message || "Failed to remove test",
       );
     }
   };
 
-  const handleRestore = async (medicine) => {
+  const handleRestore = async (test) => {
     try {
-      await medicineService.updateMedicine(medicine._id, {
+      await medicalTestService.updateMedicalTest(test._id, {
         isActive: true,
       });
-      toast.success("Medicine restored");
-      loadMedicines(search.trim(), statusTab);
+      toast.success("Test restored");
+      loadTests(search.trim(), statusTab);
     } catch (error) {
       toast.error(
-        error?.response?.data?.message || "Failed to restore medicine",
+        error?.response?.data?.message || "Failed to restore test",
       );
     }
   };
@@ -218,11 +197,11 @@ const ManageMedicines = () => {
         className="bg-gradient-to-r from-blue-600 to-cyan-500 rounded-3xl p-10 text-white shadow-xl flex flex-col md:flex-row md:items-center md:justify-between gap-6"
       >
         <div>
-          <h1 className="text-4xl font-bold">💊 Medicine Catalog</h1>
+          <h1 className="text-4xl font-bold">🧪 Medical Test Catalog</h1>
 
           <p className="mt-3 text-blue-100">
-            Add medicines here so doctors can search and prescribe them
-            during consultation.
+            Add tests here so doctors can order them for patients during
+            consultation.
           </p>
         </div>
 
@@ -238,7 +217,7 @@ const ManageMedicines = () => {
             onClick={openAddForm}
             className="bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold hover:bg-blue-50"
           >
-            + Add Medicine
+            + Add Test
           </button>
         </div>
       </motion.div>
@@ -275,7 +254,7 @@ const ManageMedicines = () => {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search medicines by name, generic name or brand..."
+          placeholder="Search tests by name or category..."
           className="w-full bg-gray-100 rounded-xl p-3 outline-none"
         />
       </div>
@@ -290,7 +269,7 @@ const ManageMedicines = () => {
         >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-800">
-              {editingId ? "Edit Medicine" : "Add New Medicine"}
+              {editingId ? "Edit Test" : "Add New Test"}
             </h2>
 
             <button
@@ -307,42 +286,14 @@ const ManageMedicines = () => {
           >
             <div>
               <label className="font-semibold text-gray-700 block mb-2">
-                Medicine Name *
+                Test Name *
               </label>
 
               <input
                 name="name"
                 value={form.name}
                 onChange={handleChange}
-                placeholder="e.g. Paracetamol"
-                className="w-full bg-gray-100 rounded-xl p-3 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold text-gray-700 block mb-2">
-                Generic Name
-              </label>
-
-              <input
-                name="genericName"
-                value={form.genericName}
-                onChange={handleChange}
-                placeholder="e.g. Acetaminophen"
-                className="w-full bg-gray-100 rounded-xl p-3 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold text-gray-700 block mb-2">
-                Brand Name
-              </label>
-
-              <input
-                name="brandName"
-                value={form.brandName}
-                onChange={handleChange}
-                placeholder="e.g. Crocin"
+                placeholder="e.g. Complete Blood Count"
                 className="w-full bg-gray-100 rounded-xl p-3 outline-none"
               />
             </div>
@@ -356,54 +307,51 @@ const ManageMedicines = () => {
                 name="category"
                 value={form.category}
                 onChange={handleChange}
-                placeholder="e.g. Analgesic"
+                placeholder="e.g. Pathology"
                 className="w-full bg-gray-100 rounded-xl p-3 outline-none"
               />
             </div>
 
             <div>
               <label className="font-semibold text-gray-700 block mb-2">
-                Dosage Form
+                Price
               </label>
 
-              <select
-                name="dosageForm"
-                value={form.dosageForm}
+              <input
+                name="price"
+                type="number"
+                value={form.price}
                 onChange={handleChange}
+                placeholder="e.g. 500"
                 className="w-full bg-gray-100 rounded-xl p-3 outline-none"
-              >
-                {DOSAGE_FORMS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             <div>
               <label className="font-semibold text-gray-700 block mb-2">
-                Strength
+                Preparation
               </label>
 
               <input
-                name="strength"
-                value={form.strength}
+                name="preparation"
+                value={form.preparation}
                 onChange={handleChange}
-                placeholder="e.g. 500mg"
+                placeholder="e.g. Fasting for 8 hours"
                 className="w-full bg-gray-100 rounded-xl p-3 outline-none"
               />
             </div>
 
             <div className="md:col-span-2">
               <label className="font-semibold text-gray-700 block mb-2">
-                Manufacturer
+                Description
               </label>
 
-              <input
-                name="manufacturer"
-                value={form.manufacturer}
+              <textarea
+                name="description"
+                value={form.description}
                 onChange={handleChange}
-                placeholder="e.g. GSK"
+                placeholder="Short description of the test"
+                rows={3}
                 className="w-full bg-gray-100 rounded-xl p-3 outline-none"
               />
             </div>
@@ -425,62 +373,59 @@ const ManageMedicines = () => {
                 {saving
                   ? "Saving..."
                   : editingId
-                  ? "Update Medicine"
-                  : "Add Medicine"}
+                  ? "Update Test"
+                  : "Add Test"}
               </button>
             </div>
           </form>
         </motion.div>
       )}
 
-      {/* MEDICINE LIST */}
+      {/* TEST LIST */}
 
       <div className="mt-8 bg-white rounded-3xl shadow-lg p-8">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">
-          {medicines.length}{" "}
+          {tests.length}{" "}
           {statusTab === "inactive" ? "Removed " : ""}
-          Medicine{medicines.length === 1 ? "" : "s"}
+          Test{tests.length === 1 ? "" : "s"}
         </h2>
 
-        {loading && <p className="text-gray-400">Loading medicines...</p>}
+        {loading && <p className="text-gray-400">Loading tests...</p>}
 
-        {!loading && medicines.length === 0 && (
+        {!loading && tests.length === 0 && (
           <p className="text-gray-400">
             {statusTab === "inactive"
-              ? "No removed medicines."
-              : 'No medicines found. Click "Add Medicine" to create your first entry.'}
+              ? "No removed tests."
+              : 'No tests found. Click "Add Test" to create your first entry.'}
           </p>
         )}
 
         <div className="space-y-3">
-          {medicines.map((medicine) => (
+          {tests.map((test) => (
             <div
-              key={medicine._id}
+              key={test._id}
               className="bg-gray-50 rounded-2xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
             >
               <div>
                 <h3 className="font-bold text-gray-800">
-                  {medicine.name}
+                  {test.name}
 
-                  {medicine.strength && (
+                  {test.price !== undefined && test.price !== null && (
                     <span className="text-gray-400 font-normal">
                       {" "}
-                      &middot; {medicine.strength}
+                      &middot; ₹{test.price}
                     </span>
                   )}
 
-                  <span className="ml-2 text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
-                    {medicine.dosageForm}
-                  </span>
+                  {test.category && (
+                    <span className="ml-2 text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                      {test.category}
+                    </span>
+                  )}
                 </h3>
 
                 <p className="text-gray-500 text-sm mt-1">
-                  {[
-                    medicine.genericName,
-                    medicine.brandName,
-                    medicine.category,
-                    medicine.manufacturer,
-                  ]
+                  {[test.preparation, test.description]
                     .filter(Boolean)
                     .join(" · ") || "No additional details"}
                 </p>
@@ -490,14 +435,14 @@ const ManageMedicines = () => {
                 {statusTab === "active" ? (
                   <>
                     <button
-                      onClick={() => openEditForm(medicine)}
+                      onClick={() => openEditForm(test)}
                       className="px-4 py-2 rounded-lg font-semibold text-sm text-blue-600 hover:bg-blue-50 border border-blue-200"
                     >
                       Edit
                     </button>
 
                     <button
-                      onClick={() => handleDelete(medicine)}
+                      onClick={() => handleDelete(test)}
                       className="px-4 py-2 rounded-lg font-semibold text-sm text-red-600 hover:bg-red-50 border border-red-200"
                     >
                       Remove
@@ -505,7 +450,7 @@ const ManageMedicines = () => {
                   </>
                 ) : (
                   <button
-                    onClick={() => handleRestore(medicine)}
+                    onClick={() => handleRestore(test)}
                     className="px-4 py-2 rounded-lg font-semibold text-sm text-green-600 hover:bg-green-50 border border-green-200"
                   >
                     Restore
@@ -520,4 +465,4 @@ const ManageMedicines = () => {
   );
 };
 
-export default ManageMedicines;
+export default ManageMedicalTests;

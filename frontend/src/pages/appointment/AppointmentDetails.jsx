@@ -370,7 +370,8 @@ md:col-span-2
                         </p>
 
                         <p>
-                          {item.dosage && `Dosage: ${item.dosage} `}
+                          {item.quantity && `Take: ${item.quantity} `}
+                          {item.dosage && `· Strength: ${item.dosage} `}
                           {item.frequency && `· Frequency: ${item.frequency} `}
                           {item.duration && `· Duration: ${item.duration}`}
                         </p>

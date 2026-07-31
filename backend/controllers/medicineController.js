@@ -67,13 +67,24 @@ export const getMedicines = async (req, res) => {
       limit = 10,
       search = "",
       category,
+      status = "active",
     } = req.query;
 
     // FILTER
+    //
+    // Doctors always see active medicines only.
+    // Hospital admins can also request "inactive"
+    // (removed) or "all", e.g. to restore one that
+    // was removed by mistake.
 
-    const filter = {
-      isActive: true,
-    };
+    const filter = {};
+
+    if (req.user.role !== "hospital_admin" || status === "active") {
+      filter.isActive = true;
+    } else if (status === "inactive") {
+      filter.isActive = false;
+    }
+    // status === "all" (hospital_admin only) -> no isActive filter
 
     if (search) {
       filter.$text = {

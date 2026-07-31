@@ -1836,6 +1836,87 @@ export const getConsultationHistory = async (req, res) => {
   }
 };
 
+// =================================
+// GET PATIENT HISTORY WITH THIS DOCTOR
+//
+// Doctor-only. When the SAME doctor sees
+// a returning patient, this shows that
+// doctor's own past diagnoses/prescriptions
+// with this patient as a quick summary.
+//
+// A different (new) doctor never sees this —
+// each doctor only sees their own consultation
+// history with the patient, so a visit to a
+// new doctor always starts as a fresh, blank
+// consultation.
+// =================================
+
+export const getPatientHistoryWithDoctor = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({
+      user: req.user._id,
+    })
+      .select("_id")
+      .lean();
+
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor profile not found",
+      });
+    }
+
+    const { patientId } = req.params;
+
+    const filter = {
+      patient: patientId,
+      doctor: doctor._id,
+      status: "completed",
+    };
+
+    if (req.query.excludeAppointmentId) {
+      filter._id = {
+        $ne: req.query.excludeAppointmentId,
+      };
+    }
+
+    const appointments = await Appointment.find(filter)
+      .populate(
+        "consultation.medicines.medicine",
+        "name genericName dosageForm strength",
+      )
+      .populate("consultation.tests.test", "name category")
+      .sort({
+        appointmentDate: -1,
+      })
+      .lean();
+
+    const history = appointments.map((appointment) => ({
+      appointmentId: appointment._id,
+      appointmentDate: appointment.appointmentDate,
+      diagnosis: appointment.consultation.diagnosis,
+      medicines: appointment.consultation.medicines,
+      tests: appointment.consultation.tests,
+      remarks: appointment.consultation.remarks,
+      followUpDate: appointment.consultation.followUpDate,
+      consultationDate: appointment.consultation.consultationDate,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      count: history.length,
+      history,
+    });
+  } catch (error) {
+    console.error("GET PATIENT HISTORY WITH DOCTOR ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch patient history",
+    });
+  }
+};
+
 export const uploadConsultationAttachments = async (req, res) => {
   try {
     const doctor = await Doctor.findOne({

@@ -219,12 +219,24 @@ completedAt: {
               ref: "Medicine",
             },
 
+            // How much to take each time, e.g. "1 tablet", "10ml"
+            quantity: {
+              type: String,
+              trim: true,
+            },
+
             dosage: {
               type: String,
               trim: true,
             },
 
             frequency: {
+              type: String,
+              trim: true,
+            },
+
+            // Before / after / with food
+            mealTiming: {
               type: String,
               trim: true,
             },

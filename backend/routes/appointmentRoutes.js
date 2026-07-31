@@ -13,6 +13,7 @@ import {
   deleteUnpaidAppointment,
   completeConsultation,   
   getConsultationHistory,
+  getPatientHistoryWithDoctor,
   uploadConsultationAttachments,
 } from "../controllers/appointmentController.js";
 
@@ -198,6 +199,22 @@ router.get(
   authorizeRoles("patient"),
 
   getConsultationHistory,
+);
+
+// =================================
+// PATIENT HISTORY WITH THIS DOCTOR
+// DOCTOR ONLY — shows only this doctor's
+// own past consultations with the patient
+// =================================
+
+router.get(
+  "/patient/:patientId/history",
+
+  protect,
+
+  authorizeRoles("doctor"),
+
+  getPatientHistoryWithDoctor,
 );
 
 router.patch(

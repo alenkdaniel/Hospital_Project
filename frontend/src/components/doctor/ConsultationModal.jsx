@@ -12,6 +12,8 @@ import medicalTestService from "../../features/medicalTest/medicalTestService";
 
 import { completeConsultation } from "../../features/appointment/appointmentSlice";
 
+import appointmentService from "../../features/appointment/appointmentService";
+
 // =====================================
 // PRESCRIPTION TIMING SLOTS
 //
@@ -86,6 +88,7 @@ const ConsultationModal = ({ appointment, onClose }) => {
     (existingConsultation?.medicines || []).map((item) => ({
       medicine: item.medicine?._id || item.medicine,
       name: item.medicine?.name || "Medicine",
+      quantity: item.quantity || "",
       dosage: item.dosage || "",
       frequency: item.frequency || "",
       timing: parseFrequencyCode(item.frequency),
@@ -106,40 +109,104 @@ const ConsultationModal = ({ appointment, onClose }) => {
   const [submitting, setSubmitting] = useState(false);
 
   // =====================================
-  // MEDICINE SEARCH
+  // PATIENT HISTORY WITH THIS DOCTOR
+  //
+  // When the SAME doctor sees a returning
+  // patient, show a summary of their own
+  // past diagnoses with this patient.
+  //
+  // A different doctor never fetches or
+  // sees this — each doctor only ever
+  // pulls their own history, so a new
+  // doctor always starts a blank
+  // consultation.
+  // =====================================
+
+  const [patientHistory, setPatientHistory] = useState([]);
+
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const [historyExpanded, setHistoryExpanded] = useState(false);
+
+  useEffect(() => {
+    if (isReadOnly) return;
+
+    const patientId = appointment?.patient?._id;
+
+    if (!patientId) return;
+
+    const loadHistory = async () => {
+      setHistoryLoading(true);
+
+      try {
+        const response = await appointmentService.getPatientHistoryWithDoctor(
+          patientId,
+          appointment?._id,
+        );
+
+        setPatientHistory(response.history || []);
+      } catch (error) {
+        setPatientHistory([]);
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+
+    loadHistory();
+  }, [isReadOnly, appointment?.patient?._id, appointment?._id]);
+
+  // =====================================
+  // MEDICINE DROPDOWN
+  //
+  // Loads the FULL list of medicines added
+  // by the hospital once, then shows it as
+  // a dropdown the doctor can browse/filter
+  // instead of only type-ahead search.
   // =====================================
 
   const [medicineKeyword, setMedicineKeyword] = useState("");
 
-  const [medicineResults, setMedicineResults] = useState([]);
+  const [allMedicines, setAllMedicines] = useState([]);
 
-  const [medicineSearching, setMedicineSearching] = useState(false);
+  const [medicineLoading, setMedicineLoading] = useState(false);
+
+  const [medicineDropdownOpen, setMedicineDropdownOpen] = useState(false);
 
   useEffect(() => {
-    if (!medicineKeyword.trim()) {
-      setMedicineResults([]);
+    if (isReadOnly) return;
 
-      return;
-    }
+    const loadMedicines = async () => {
+      setMedicineLoading(true);
 
-    setMedicineSearching(true);
-
-    const timer = setTimeout(async () => {
       try {
-        const response = await medicineService.searchMedicines(
-          medicineKeyword.trim(),
-        );
+        const response = await medicineService.getMedicines({ limit: 1000 });
 
-        setMedicineResults(response.medicines || []);
+        setAllMedicines(response.medicines || []);
       } catch (error) {
-        setMedicineResults([]);
+        setAllMedicines([]);
       } finally {
-        setMedicineSearching(false);
+        setMedicineLoading(false);
       }
-    }, 350);
+    };
 
-    return () => clearTimeout(timer);
-  }, [medicineKeyword]);
+    loadMedicines();
+  }, [isReadOnly]);
+
+  // Filters the already-loaded hospital medicine list locally —
+  // shows the FULL list when the field is empty (dropdown mode),
+  // and narrows it down as the doctor types.
+
+  const medicineResults = medicineKeyword.trim()
+    ? allMedicines.filter((item) => {
+        const q = medicineKeyword.trim().toLowerCase();
+
+        return (
+          item.name?.toLowerCase().includes(q) ||
+          item.genericName?.toLowerCase().includes(q) ||
+          item.brandName?.toLowerCase().includes(q)
+        );
+      })
+    : allMedicines;
 
   const addMedicine = (item) => {
     if (medicines.some((m) => m.medicine === item._id)) {
@@ -153,6 +220,7 @@ const ConsultationModal = ({ appointment, onClose }) => {
       {
         medicine: item._id,
         name: item.name,
+        quantity: "",
         dosage: item.strength || "",
         frequency: "",
         timing: { morning: false, afternoon: false, night: false },
@@ -164,7 +232,7 @@ const ConsultationModal = ({ appointment, onClose }) => {
 
     setMedicineKeyword("");
 
-    setMedicineResults([]);
+    setMedicineDropdownOpen(false);
   };
 
   const updateMedicineField = (index, field, value) => {
@@ -220,40 +288,58 @@ const ConsultationModal = ({ appointment, onClose }) => {
   };
 
   // =====================================
-  // TEST SEARCH
+  // TEST DROPDOWN
+  //
+  // Loads the FULL list of medical tests
+  // added by the hospital once, then shows
+  // it as a dropdown the doctor can browse
+  // /filter instead of only type-ahead search.
   // =====================================
 
   const [testKeyword, setTestKeyword] = useState("");
 
-  const [testResults, setTestResults] = useState([]);
+  const [allTests, setAllTests] = useState([]);
 
-  const [testSearching, setTestSearching] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
+
+  const [testDropdownOpen, setTestDropdownOpen] = useState(false);
 
   useEffect(() => {
-    if (!testKeyword.trim()) {
-      setTestResults([]);
+    if (isReadOnly) return;
 
-      return;
-    }
+    const loadTests = async () => {
+      setTestLoading(true);
 
-    setTestSearching(true);
-
-    const timer = setTimeout(async () => {
       try {
-        const response = await medicalTestService.searchMedicalTests(
-          testKeyword.trim(),
-        );
+        const response = await medicalTestService.getMedicalTests({
+          limit: 1000,
+        });
 
-        setTestResults(response.medicalTests || []);
+        setAllTests(response.medicalTests || []);
       } catch (error) {
-        setTestResults([]);
+        setAllTests([]);
       } finally {
-        setTestSearching(false);
+        setTestLoading(false);
       }
-    }, 350);
+    };
 
-    return () => clearTimeout(timer);
-  }, [testKeyword]);
+    loadTests();
+  }, [isReadOnly]);
+
+  // Filters the already-loaded hospital test list locally —
+  // shows the FULL list when the field is empty (dropdown mode),
+  // and narrows it down as the doctor types.
+
+  const testResults = testKeyword.trim()
+    ? allTests.filter((item) => {
+        const q = testKeyword.trim().toLowerCase();
+
+        return (
+          item.name?.toLowerCase().includes(q) ||
+          item.category?.toLowerCase().includes(q)
+        );
+      })
+    : allTests;
 
   const addTest = (item) => {
     if (tests.some((t) => t.test === item._id)) {
@@ -273,7 +359,7 @@ const ConsultationModal = ({ appointment, onClose }) => {
 
     setTestKeyword("");
 
-    setTestResults([]);
+    setTestDropdownOpen(false);
   };
 
   const updateTestField = (index, field, value) => {
@@ -309,6 +395,7 @@ const ConsultationModal = ({ appointment, onClose }) => {
 
       medicines: medicines.map((item) => ({
         medicine: item.medicine,
+        quantity: item.quantity,
         dosage: item.dosage,
         frequency: item.frequency,
         mealTiming: item.mealTiming,
@@ -395,6 +482,81 @@ const ConsultationModal = ({ appointment, onClose }) => {
               </div>
             )}
 
+            {/* PREVIOUS VISITS WITH THIS DOCTOR */}
+
+            {!isReadOnly && historyLoading && (
+              <div className="bg-blue-50 rounded-2xl p-4 text-sm text-blue-500">
+                Checking for previous visits with you...
+              </div>
+            )}
+
+            {!isReadOnly && !historyLoading && patientHistory.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                <button
+                  type="button"
+                  onClick={() => setHistoryExpanded((prev) => !prev)}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <div>
+                    <h3 className="font-bold text-amber-800">
+                      📋 Returning Patient — {patientHistory.length} previous
+                      visit{patientHistory.length === 1 ? "" : "s"} with you
+                    </h3>
+
+                    <p className="text-amber-700 text-sm mt-1">
+                      Last diagnosis (
+                      {new Date(
+                        patientHistory[0].consultationDate ||
+                          patientHistory[0].appointmentDate,
+                      ).toLocaleDateString()}
+                      ): {patientHistory[0].diagnosis}
+                    </p>
+                  </div>
+
+                  <span className="text-amber-600 font-semibold text-sm shrink-0 ml-4">
+                    {historyExpanded ? "Hide ▲" : "View all ▼"}
+                  </span>
+                </button>
+
+                {historyExpanded && (
+                  <div className="mt-4 space-y-3">
+                    {patientHistory.map((visit) => (
+                      <div
+                        key={visit.appointmentId}
+                        className="bg-white rounded-xl p-4 text-sm"
+                      >
+                        <p className="font-semibold text-gray-700">
+                          {new Date(
+                            visit.consultationDate || visit.appointmentDate,
+                          ).toLocaleDateString()}
+                        </p>
+
+                        <p className="text-gray-600 mt-1">
+                          Diagnosis: {visit.diagnosis || "—"}
+                        </p>
+
+                        {visit.medicines?.length > 0 && (
+                          <p className="text-gray-500 mt-1">
+                            Medicines:{" "}
+                            {visit.medicines
+                              .map((m) => m.medicine?.name)
+                              .filter(Boolean)
+                              .join(", ")}
+                          </p>
+                        )}
+
+                        {visit.remarks && (
+                          <p className="text-gray-500 mt-1">
+                            Remarks: {visit.remarks}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* DIAGNOSIS */}
 
             <div>
@@ -421,35 +583,52 @@ const ConsultationModal = ({ appointment, onClose }) => {
                 <div className="relative mb-3">
                   <input
                     value={medicineKeyword}
-                    onChange={(e) => setMedicineKeyword(e.target.value)}
-                    placeholder="Search medicine by name..."
+                    onFocus={() => setMedicineDropdownOpen(true)}
+                    onBlur={() =>
+                      setTimeout(() => setMedicineDropdownOpen(false), 150)
+                    }
+                    onChange={(e) => {
+                      setMedicineKeyword(e.target.value);
+                      setMedicineDropdownOpen(true);
+                    }}
+                    placeholder="Click to choose from hospital medicine list..."
                     className="w-full bg-gray-100 rounded-xl p-3 outline-none"
                   />
 
-                  {medicineKeyword.trim() && (
-                    <div className="absolute left-0 right-0 bg-white shadow-xl rounded-xl mt-1 z-20 max-h-52 overflow-y-auto border">
-                      {medicineSearching && (
-                        <p className="p-3 text-sm text-gray-400">Searching...</p>
+                  {medicineDropdownOpen && (
+                    <div className="absolute left-0 right-0 bg-white shadow-xl rounded-xl mt-1 z-20 max-h-60 overflow-y-auto border">
+                      {medicineLoading && (
+                        <p className="p-3 text-sm text-gray-400">Loading medicines...</p>
                       )}
 
-                      {!medicineSearching && medicineResults.length === 0 && (
-                        <p className="p-3 text-sm text-gray-400">No medicines found</p>
+                      {!medicineLoading && medicineResults.length === 0 && (
+                        <p className="p-3 text-sm text-gray-400">
+                          {allMedicines.length === 0
+                            ? "No medicines added by the hospital yet"
+                            : "No medicines found"}
+                        </p>
                       )}
 
-                      {medicineResults.map((item) => (
-                        <button
-                          key={item._id}
-                          type="button"
-                          onClick={() => addMedicine(item)}
-                          className="w-full text-left px-4 py-2 hover:bg-blue-50 border-b last:border-0"
-                        >
-                          <span className="font-semibold">{item.name}</span>
+                      {!medicineLoading &&
+                        medicineResults.map((item) => (
+                          <button
+                            key={item._id}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => addMedicine(item)}
+                            className="w-full text-left px-4 py-2 hover:bg-blue-50 border-b last:border-0"
+                          >
+                            <span className="font-semibold">{item.name}</span>
 
-                          {item.strength && (
-                            <span className="text-gray-400 text-sm"> &middot; {item.strength}</span>
-                          )}
-                        </button>
-                      ))}
+                            {item.strength && (
+                              <span className="text-gray-400 text-sm"> &middot; {item.strength}</span>
+                            )}
+
+                            {item.dosageForm && (
+                              <span className="text-gray-400 text-sm"> &middot; {item.dosageForm}</span>
+                            )}
+                          </button>
+                        ))}
                     </div>
                   )}
                 </div>
@@ -476,12 +655,20 @@ const ConsultationModal = ({ appointment, onClose }) => {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <input
+                        disabled={isReadOnly}
+                        value={item.quantity}
+                        onChange={(e) => updateMedicineField(index, "quantity", e.target.value)}
+                        placeholder="Qty per dose (e.g. 1 tablet)"
+                        className="bg-white disabled:bg-gray-100 rounded-lg p-2 text-sm outline-none border"
+                      />
+
                       <input
                         disabled={isReadOnly}
                         value={item.dosage}
                         onChange={(e) => updateMedicineField(index, "dosage", e.target.value)}
-                        placeholder="Dosage (e.g. 500mg)"
+                        placeholder="Strength (e.g. 500mg)"
                         className="bg-white disabled:bg-gray-100 rounded-lg p-2 text-sm outline-none border"
                       />
 
@@ -569,35 +756,48 @@ const ConsultationModal = ({ appointment, onClose }) => {
                 <div className="relative mb-3">
                   <input
                     value={testKeyword}
-                    onChange={(e) => setTestKeyword(e.target.value)}
-                    placeholder="Search test by name..."
+                    onFocus={() => setTestDropdownOpen(true)}
+                    onBlur={() =>
+                      setTimeout(() => setTestDropdownOpen(false), 150)
+                    }
+                    onChange={(e) => {
+                      setTestKeyword(e.target.value);
+                      setTestDropdownOpen(true);
+                    }}
+                    placeholder="Click to choose from hospital test list..."
                     className="w-full bg-gray-100 rounded-xl p-3 outline-none"
                   />
 
-                  {testKeyword.trim() && (
-                    <div className="absolute left-0 right-0 bg-white shadow-xl rounded-xl mt-1 z-20 max-h-52 overflow-y-auto border">
-                      {testSearching && (
-                        <p className="p-3 text-sm text-gray-400">Searching...</p>
+                  {testDropdownOpen && (
+                    <div className="absolute left-0 right-0 bg-white shadow-xl rounded-xl mt-1 z-20 max-h-60 overflow-y-auto border">
+                      {testLoading && (
+                        <p className="p-3 text-sm text-gray-400">Loading tests...</p>
                       )}
 
-                      {!testSearching && testResults.length === 0 && (
-                        <p className="p-3 text-sm text-gray-400">No tests found</p>
+                      {!testLoading && testResults.length === 0 && (
+                        <p className="p-3 text-sm text-gray-400">
+                          {allTests.length === 0
+                            ? "No tests added by the hospital yet"
+                            : "No tests found"}
+                        </p>
                       )}
 
-                      {testResults.map((item) => (
-                        <button
-                          key={item._id}
-                          type="button"
-                          onClick={() => addTest(item)}
-                          className="w-full text-left px-4 py-2 hover:bg-blue-50 border-b last:border-0"
-                        >
-                          <span className="font-semibold">{item.name}</span>
+                      {!testLoading &&
+                        testResults.map((item) => (
+                          <button
+                            key={item._id}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => addTest(item)}
+                            className="w-full text-left px-4 py-2 hover:bg-blue-50 border-b last:border-0"
+                          >
+                            <span className="font-semibold">{item.name}</span>
 
-                          {item.category && (
-                            <span className="text-gray-400 text-sm"> &middot; {item.category}</span>
-                          )}
-                        </button>
-                      ))}
+                            {item.category && (
+                              <span className="text-gray-400 text-sm"> &middot; {item.category}</span>
+                            )}
+                          </button>
+                        ))}
                     </div>
                   )}
                 </div>

@@ -156,6 +156,27 @@ const getConsultationHistory = async () => {
 };
 
 // =====================================
+// GET PATIENT HISTORY WITH THIS DOCTOR
+//
+// Doctor — used to show a quick summary of
+// this doctor's own past consultations with
+// a returning patient.
+// =====================================
+
+const getPatientHistoryWithDoctor = async (patientId, excludeAppointmentId) => {
+  const response = await API.get(
+    `/appointments/patient/${patientId}/history`,
+    {
+      params: excludeAppointmentId
+        ? { excludeAppointmentId }
+        : {},
+    },
+  );
+
+  return response.data;
+};
+
+// =====================================
 // UPLOAD CONSULTATION ATTACHMENTS
 //
 // Doctor
@@ -203,6 +224,8 @@ const appointmentService = {
   completeConsultation,
 
   getConsultationHistory,
+
+  getPatientHistoryWithDoctor,
 
   uploadConsultationAttachments,
 };
