@@ -22,6 +22,8 @@ import Home from "./pages/Home";
 
 import About from "./pages/About";
 
+import Reviews from "./pages/Reviews";
+
 // =====================================
 // AUTH
 // =====================================
@@ -108,6 +110,8 @@ PUBLIC
         <Route path="/" element={<Home />} />
 
         <Route path="/about" element={<About />} />
+
+        <Route path="/reviews" element={<Reviews />} />
 
         <Route path="/hospitals" element={<Hospitals />} />
 

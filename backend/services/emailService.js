@@ -60,7 +60,16 @@ const sendEmail = async ({ to, subject, html }) => {
       rejected: info.rejected,
     };
   } catch (error) {
-    console.error("EMAIL ERROR:", error);
+    // This is the ONLY place email failures need to be logged —
+    // every controller/cron in the app calls this same function,
+    // and none of them check the return value, so `to` + `subject`
+    // here is what actually tells you which email silently failed
+    // and why (bad SMTP credentials, provider rejection, etc.)
+
+    console.error(
+      `EMAIL ERROR — failed to send "${subject}" to ${to}:`,
+      error.message,
+    );
 
     return {
       success: false,

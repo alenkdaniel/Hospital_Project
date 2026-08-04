@@ -199,6 +199,20 @@ const uploadConsultationAttachments = async (id, formData) => {
 };
 
 // =====================================
+// DELETE UNPAID APPOINTMENT
+//
+// Called when the patient cancels/dismisses
+// the payment modal, so an abandoned booking
+// doesn't linger and show up on the hospital
+// / doctor's appointment list as "pending payment"
+// =====================================
+
+const deleteUnpaidAppointment = async (id) => {
+  const response = await API.delete(`/appointments/${id}/unpaid`);
+  return response.data;
+};
+
+// =====================================
 // EXPORT SERVICE
 // =====================================
 
@@ -228,6 +242,8 @@ const appointmentService = {
   getPatientHistoryWithDoctor,
 
   uploadConsultationAttachments,
+
+  deleteUnpaidAppointment,
 };
 
 export default appointmentService;

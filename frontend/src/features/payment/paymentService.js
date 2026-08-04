@@ -76,6 +76,8 @@ const openRazorpayCheckout = async ({
   user,
 
   onSuccess,
+
+  onCancel,
 }) => {
   const loaded = await loadRazorpayScript();
 
@@ -102,6 +104,8 @@ const openRazorpayCheckout = async ({
     modal: {
       ondismiss: () => {
         toast("Payment cancelled.");
+
+        if (onCancel) onCancel();
       },
     },
 
@@ -128,6 +132,8 @@ const openRazorpayCheckout = async ({
     console.error("Payment Failed:", response.error);
 
     toast.error(response.error.description || "Payment Failed");
+
+    if (onCancel) onCancel();
   });
 
   paymentObject.open();

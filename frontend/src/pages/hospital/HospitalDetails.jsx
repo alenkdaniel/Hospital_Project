@@ -16,6 +16,10 @@ import {
   resetDoctor,
 } from "../../features/doctor/doctorSlice";
 
+import { getHospitalReviews } from "../../features/review/reviewSlice";
+
+import { Star } from "lucide-react";
+
 const HospitalDetails = () => {
   const { id } = useParams();
 
@@ -31,6 +35,8 @@ const HospitalDetails = () => {
 
   const { doctors } = useSelector((state) => state.doctor);
 
+  const { hospitalReviews } = useSelector((state) => state.review);
+
   // ================================
   // LOAD DATA
   // ================================
@@ -39,6 +45,8 @@ const HospitalDetails = () => {
     dispatch(getHospitalById(id));
 
     dispatch(getDoctorsByHospital(id));
+
+    dispatch(getHospitalReviews({ hospitalId: id, params: { limit: 6 } }));
 
     return () => {
       dispatch(resetHospital());
@@ -343,6 +351,53 @@ rounded-xl
             </motion.div>
           ))}
         </div>
+      </section>
+
+      {/* PATIENT REVIEWS */}
+
+      <section className="px-6 pb-20 md:px-24">
+        <h2 className="text-3xl font-bold text-slate-900">
+          🗣️ What Patients Say
+        </h2>
+
+        {hospitalReviews.length === 0 ? (
+          <p className="mt-6 text-gray-500">
+            No reviews yet for this hospital.
+          </p>
+        ) : (
+          <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {hospitalReviews.map((review) => (
+              <div
+                key={review._id}
+                className="rounded-2xl bg-white p-6 shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-slate-900">
+                    {review.patient?.name || "Verified Patient"}
+                  </p>
+
+                  <div className="flex gap-0.5">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        size={15}
+                        className={
+                          i < review.hospitalRating
+                            ? "fill-yellow-400 text-yellow-400"
+                            : "text-gray-300"
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <p className="mt-3 text-sm leading-6 text-gray-600">
+                  "{review.hospitalComment}"
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

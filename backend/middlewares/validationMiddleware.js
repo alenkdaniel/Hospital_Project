@@ -427,3 +427,31 @@ export const updateMedicalTestValidation = [
 
 
 
+
+// =====================================
+// REVIEW VALIDATION
+// =====================================
+
+export const reviewValidation = [
+  body("doctorRating")
+    .isInt({ min: 1, max: 5 })
+    .withMessage("Doctor rating must be between 1 and 5"),
+
+  body("hospitalRating")
+    .isInt({ min: 1, max: 5 })
+    .withMessage("Hospital rating must be between 1 and 5"),
+
+  body("doctorComment")
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("Doctor comment must be under 500 characters"),
+
+  body("hospitalComment")
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("Hospital comment must be under 500 characters"),
+
+  validate,
+];

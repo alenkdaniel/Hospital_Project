@@ -22,6 +22,9 @@ import MedicalTest from "../models/MedicalTest.js";
 
 import generatePrescriptionPdf from "../utils/generatePrescriptionPdf.js";
 
+// ⭐ PUSH NOTIFICATIONS (SOCKET.IO)
+import { createAndSendNotification } from "../services/notificationService.js";
+
 // =================================
 // CREATE APPOINTMENT
 // =================================
@@ -279,6 +282,15 @@ Amount : ₹${appointment.booking.consultationFee}
       console.error("Appointment Email Error:", emailError);
     }
 
+    // NOTE: the "New Appointment Booked" push notification to the
+    // hospital admin + doctor is intentionally NOT sent here. At
+    // this point the appointment isn't paid for yet — if the
+    // patient abandons/cancels the payment step, the appointment
+    // gets deleted (see deleteUnpaidAppointment) and no one should
+    // have been notified about it in the first place. The
+    // notification is sent from verifyPayment() instead, once the
+    // booking is actually confirmed.
+
     return res.status(201).json({
       success: true,
       message: "Appointment booked successfully.",
@@ -490,6 +502,52 @@ Reason : ${reason}
     } catch (error) {
       console.error("Cancel Email Error:", error);
     }
+
+    // ======================================================
+    // PUSH NOTIFICATION (SOCKET.IO)
+    // Notify the patient, and (if the patient cancelled it)
+    // notify the hospital admin + doctor too.
+    // ======================================================
+
+    try {
+      const cancelMessage = `Appointment ${appointment.booking.appointmentNumber} on ${new Date(
+        appointment.appointmentDate,
+      ).toLocaleDateString("en-IN")} at ${appointment.slot.start} was cancelled. Reason: ${reason || "Not provided"}.`;
+
+      const notifyTargets = new Set();
+
+      // Always notify the patient (unless the patient is the
+      // one who performed the cancellation)
+
+      if (!appointment.patient._id.equals(req.user._id)) {
+        notifyTargets.add(appointment.patient._id.toString());
+      }
+
+      // If the patient cancelled it, notify the hospital admin
+
+      if (
+        req.user.role === "patient" &&
+        appointment.hospital?.createdBy
+      ) {
+        notifyTargets.add(appointment.hospital.createdBy.toString());
+      }
+
+      await Promise.all(
+        [...notifyTargets].map((userId) =>
+          createAndSendNotification({
+            user: userId,
+            title: "Appointment Cancelled",
+            message: cancelMessage,
+            type: "appointment_cancelled",
+            link: `/appointments/${appointment._id}`,
+            relatedAppointment: appointment._id,
+          }),
+        ),
+      );
+    } catch (notifyError) {
+      console.error("Cancel Notification Error:", notifyError);
+    }
+
     res.status(200).json({
       success: true,
       message: "Appointment cancelled successfully",
@@ -788,6 +846,52 @@ Reason : ${reason || "Not provided"}
     } catch (error) {
       console.error("Reschedule Email Error:", error);
     }
+
+    // ======================================================
+    // PUSH NOTIFICATION (SOCKET.IO)
+    // ======================================================
+
+    try {
+      const rescheduleMessage = `Appointment ${appointment.booking.appointmentNumber} was rescheduled to ${new Date(
+        appointment.appointmentDate,
+      ).toLocaleDateString("en-IN")} at ${appointment.slot.start}.`;
+
+      const notifyTargets = new Set();
+
+      if (!appointment.patient._id.equals(req.user._id)) {
+        notifyTargets.add(appointment.patient._id.toString());
+      }
+
+      if (req.user.role === "patient") {
+        if (appointment.doctor?.user) {
+          notifyTargets.add(appointment.doctor.user.toString());
+        }
+
+        const hospitalDoc = await Hospital.findById(appointment.hospital._id)
+          .select("createdBy")
+          .lean();
+
+        if (hospitalDoc?.createdBy) {
+          notifyTargets.add(hospitalDoc.createdBy.toString());
+        }
+      }
+
+      await Promise.all(
+        [...notifyTargets].map((userId) =>
+          createAndSendNotification({
+            user: userId,
+            title: "Appointment Rescheduled",
+            message: rescheduleMessage,
+            type: "appointment_rescheduled",
+            link: `/appointments/${appointment._id}`,
+            relatedAppointment: appointment._id,
+          }),
+        ),
+      );
+    } catch (notifyError) {
+      console.error("Reschedule Notification Error:", notifyError);
+    }
+
     return res.status(200).json({
       success: true,
       message: "Appointment rescheduled successfully",
@@ -1327,6 +1431,33 @@ Current Status : ${status.replace("_", " ")}
       }
     }
 
+    // ======================================================
+    // PUSH NOTIFICATION (SOCKET.IO)
+    // Notify the patient on every status change so they see
+    // it live in the queue (checked_in, in_consultation, etc)
+    // ======================================================
+
+    try {
+      const statusNotificationTypeMap = {
+        confirmed: "appointment_confirmed",
+        cancelled: "appointment_cancelled",
+        rejected: "appointment_rejected",
+        checked_in: "appointment_checked_in",
+        in_consultation: "appointment_in_consultation",
+      };
+
+      await createAndSendNotification({
+        user: appointment.patient._id,
+        title: `Appointment ${status.replace("_", " ")}`,
+        message: `Your appointment ${appointment.booking.appointmentNumber} with Dr. ${appointment.doctor.name} is now "${status.replace("_", " ")}".`,
+        type: statusNotificationTypeMap[status] || "general",
+        link: `/appointments/${appointment._id}`,
+        relatedAppointment: appointment._id,
+      });
+    } catch (notifyError) {
+      console.error("Status Notification Error:", notifyError);
+    }
+
     res.json({
       message: "Appointment updated",
 
@@ -1576,6 +1707,23 @@ Follow-up Date : ${
         }),
       });
     } catch (error) {}
+
+    // =================================
+    // PUSH NOTIFICATION (SOCKET.IO)
+    // =================================
+
+    try {
+      await createAndSendNotification({
+        user: appointment.patient._id,
+        title: "Consultation Completed",
+        message: `Dr. ${appointment.doctor.name} has completed your consultation. Your prescription is ready to view.`,
+        type: "consultation_completed",
+        link: `/appointments/${appointment._id}`,
+        relatedAppointment: appointment._id,
+      });
+    } catch (notifyError) {
+      console.error("Consultation Notification Error:", notifyError);
+    }
 
     // =================================
     // SUCCESS RESPONSE

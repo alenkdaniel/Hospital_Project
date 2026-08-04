@@ -8,6 +8,9 @@ import emailTemplate from "../templates/emailTemplate.js";
 
 import { convertTimeToMinutes } from "../utils/convertTime.js";
 
+// ⭐ PUSH NOTIFICATIONS (SOCKET.IO)
+import { createAndSendNotification } from "../services/notificationService.js";
+
 // =================================
 // SAME-DAY APPOINTMENT REMINDER CRON
 //
@@ -119,6 +122,23 @@ Estimated Waiting Time : ${appointment.queue.estimatedWaitingTime} minutes
 `,
           }),
         });
+
+        // =================================
+        // PUSH NOTIFICATION (SOCKET.IO)
+        // =================================
+
+        try {
+          await createAndSendNotification({
+            user: appointment.patient._id,
+            title: "Appointment Starting Soon",
+            message: `Your appointment ${appointment.booking.appointmentNumber} starts in about ${minutesUntilStart} minute(s) at ${appointment.hospital.name}.`,
+            type: "appointment_reminder",
+            link: `/appointments/${appointment._id}`,
+            relatedAppointment: appointment._id,
+          });
+        } catch (notifyError) {
+          console.error("Same-Day Notification Error:", notifyError);
+        }
 
         // =================================
         // UPDATE SAME-DAY REMINDER STATUS

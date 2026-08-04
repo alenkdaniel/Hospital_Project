@@ -4,9 +4,16 @@ import razorpay from "../config/razorpay.js";
 
 import Appointment from "../models/Appointment.js";
 
+import Hospital from "../models/Hospital.js";
+
+import Doctor from "../models/Doctor.js";
+
 import sendEmail from "../services/emailService.js";
 
 import emailTemplate from "../templates/emailTemplate.js";
+
+// ⭐ PUSH NOTIFICATIONS (SOCKET.IO)
+import { createAndSendNotification } from "../services/notificationService.js";
 
 // =================================
 // CREATE RAZORPAY ORDER
@@ -249,6 +256,51 @@ Amount : ₹${appointment.payment.amount}
       });
     } catch (error) {
       console.error("Payment Email Error:", error);
+    }
+
+    // ======================================================
+    // PUSH NOTIFICATION (SOCKET.IO) — Hospital + Doctor
+    //
+    // Sent here (after payment is confirmed) rather than at
+    // appointment creation, so the hospital/doctor are only
+    // notified about bookings that actually went through —
+    // not ones the patient abandons mid-payment.
+    // ======================================================
+
+    try {
+      const [hospitalDoc, doctorDoc] = await Promise.all([
+        Hospital.findById(appointment.hospital._id)
+          .select("createdBy")
+          .lean(),
+        Doctor.findById(appointment.doctor._id).select("user").lean(),
+      ]);
+
+      const notifyTargets = [];
+
+      if (hospitalDoc?.createdBy) {
+        notifyTargets.push(hospitalDoc.createdBy);
+      }
+
+      if (doctorDoc?.user) {
+        notifyTargets.push(doctorDoc.user);
+      }
+
+      await Promise.all(
+        notifyTargets.map((userId) =>
+          createAndSendNotification({
+            user: userId,
+            title: "New Appointment Booked",
+            message: `${appointment.patient.name} booked an appointment (${appointment.booking.appointmentNumber}) on ${new Date(
+              appointment.appointmentDate,
+            ).toLocaleDateString("en-IN")} at ${appointment.slot.start}.`,
+            type: "appointment_created",
+            link: `/appointments/${appointment._id}`,
+            relatedAppointment: appointment._id,
+          }),
+        ),
+      );
+    } catch (notifyError) {
+      console.error("Payment Notification Error:", notifyError);
     }
 
     res.json({

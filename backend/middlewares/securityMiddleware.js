@@ -10,10 +10,47 @@ export const helmetSecurity = helmet({
   crossOriginResourcePolicy: false,
 });
 
+// ===============================
+// LOCAL REQUEST DETECTION
+//
+// Don't rely on NODE_ENV being set (it's
+// easy to forget in .env, and nodemon
+// doesn't set it automatically) — detect
+// requests coming from localhost directly
+// instead, so rate limiting is skipped in
+// local dev with zero extra setup.
+// ===============================
+
+const isLocalRequest = (req) => {
+  if (process.env.NODE_ENV === "development") return true;
+
+  const ip = req.ip || req.connection?.remoteAddress || "";
+
+  return (
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip.includes("127.0.0.1") ||
+    ip.includes("::ffff:127.0.0.1")
+  );
+};
+
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
 
-  max: 100,
+  // 100 was shared across every /api/* call from one IP — a single
+  // dashboard load alone fires several requests at once (hospital,
+  // doctors, appointments...), so real usage blew through it fast.
+  // 100 requests/15min per IP is fine for a login form, not for a
+  // full app. Raised to a more realistic ceiling for genuine abuse
+  // protection instead of tripping on normal browsing.
+
+  max: 1000,
+
+  // Skip entirely for local dev traffic (see isLocalRequest above) —
+  // this still fully protects the API once it's actually deployed
+  // behind a real public IP.
+
+  skip: isLocalRequest,
 
   message: {
     success: false,
@@ -30,6 +67,8 @@ export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
 
   max: 10,
+
+  skip: isLocalRequest,
 
   message: {
     success: false,

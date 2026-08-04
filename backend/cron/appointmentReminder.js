@@ -6,6 +6,9 @@ import sendEmail from "../services/emailService.js";
 
 import emailTemplate from "../templates/emailTemplate.js";
 
+// ⭐ PUSH NOTIFICATIONS (SOCKET.IO)
+import { createAndSendNotification } from "../services/notificationService.js";
+
 // =================================
 // APPOINTMENT REMINDER CRON
 // =================================
@@ -85,6 +88,23 @@ Estimated Waiting Time : ${appointment.queue.estimatedWaitingTime} minutes
 `,
     }),
   });
+
+  // =================================
+  // PUSH NOTIFICATION (SOCKET.IO)
+  // =================================
+
+  try {
+    await createAndSendNotification({
+      user: appointment.patient._id,
+      title: "Appointment Reminder",
+      message: `You have an appointment tomorrow (${appointment.booking.appointmentNumber}) with Dr. ${appointment.doctor.name} at ${appointment.hospital.name}.`,
+      type: "appointment_reminder",
+      link: `/appointments/${appointment._id}`,
+      relatedAppointment: appointment._id,
+    });
+  } catch (notifyError) {
+    console.error("Reminder Notification Error:", notifyError);
+  }
 
   // =================================
   // UPDATE REMINDER STATUS

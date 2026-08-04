@@ -4,6 +4,9 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
+// ⭐ SOCKET.IO — needs a raw http server to attach to
+import http from "http";
+
 import connectDB from "./config/db.js";
 
 import startAppointmentReminderCron from "./cron/appointmentReminder.js";
@@ -12,6 +15,9 @@ import startSameDayReminderCron from "./cron/sameDayReminder.js";
 
 // ⭐ ADD THIS
 import { checkCloudinaryConnection } from "./config/cloudinary.js";
+
+// ⭐ PUSH NOTIFICATIONS (SOCKET.IO)
+import { initSocket } from "./socket/socketServer.js";
 
 // ===============================
 // SECURITY IMPORT
@@ -45,6 +51,12 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 
 import medicineRoutes from "./routes/medicineRoutes.js";
 import medicalTestRoutes from "./routes/medicalTestRoutes.js";
+
+// ⭐ NOTIFICATION ROUTES
+import notificationRoutes from "./routes/notificationRoutes.js";
+
+// ⭐ REVIEW ROUTES
+import reviewRoutes from "./routes/reviewRoutes.js";
 
 // ===============================
 // DATABASE + CLOUDINARY
@@ -142,6 +154,10 @@ app.use("/api/medical-tests", medicalTestRoutes);
 
 app.use("/api/super-admin", superAdminRoutes);
 
+app.use("/api/notifications", notificationRoutes);
+
+app.use("/api/reviews", reviewRoutes);
+
 // ===============================
 // ERROR HANDLER
 // ===============================
@@ -151,13 +167,26 @@ app.use(notFound);
 app.use(errorHandler);
 
 // ===============================
-// SERVER
+// SERVER + SOCKET.IO
 // ===============================
+//
+// Express apps can't host a WebSocket
+// server on their own — Socket.IO needs
+// the raw http.Server instance so it can
+// hijack the "upgrade" request. So we
+// wrap `app` in an http server here and
+// listen on that instead of `app.listen`.
+// ===============================
+
+const server = http.createServer(app);
+
+initSocket(server);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Socket.IO listening on the same port`);
   startAppointmentReminderCron();
   startSameDayReminderCron();
 });

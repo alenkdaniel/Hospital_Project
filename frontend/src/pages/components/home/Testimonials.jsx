@@ -1,40 +1,81 @@
+import { useEffect } from "react";
+
+import { useDispatch, useSelector } from "react-redux";
+
 import { motion } from "framer-motion";
+
 import { Link } from "react-router-dom";
+
 import { Star, Quote } from "lucide-react";
 
-const testimonials = [
+import { getFeaturedReviews } from "../../../features/review/reviewSlice";
+
+// =====================================
+// FALLBACK CONTENT
+// Shown only until the platform has
+// real patient reviews to display.
+// =====================================
+
+const fallbackTestimonials = [
   {
-    id: 1,
+    id: "fallback-1",
     name: "Sophia Williams",
-    location: "New York",
-    image:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&q=80",
     review:
       "Booking my appointment was incredibly simple. The hospital staff and doctors were professional, and I received excellent care.",
   },
 
   {
-    id: 2,
+    id: "fallback-2",
     name: "Michael Johnson",
-    location: "Chicago",
-    image:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&q=80",
     review:
       "I found a specialist within minutes. The entire booking process was smooth and saved me a lot of time.",
   },
 
   {
-    id: 3,
+    id: "fallback-3",
     name: "Emily Davis",
-    location: "Los Angeles",
-    image:
-      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=300&q=80",
     review:
       "The emergency hospital locator helped my family during an urgent situation. Highly recommended healthcare platform.",
   },
 ];
 
+// =====================================
+// BUILD A DISPLAY CARD FROM A REAL
+// REVIEW DOCUMENT
+//
+// Each review has both a doctor side
+// and a hospital side — prefer whichever
+// one actually has a comment written.
+// =====================================
+
+const toCard = (review) => {
+  const useDoctor = Boolean(review.doctorComment);
+
+  return {
+    id: review._id,
+    name: review.patient?.name || "Verified Patient",
+    review: useDoctor ? review.doctorComment : review.hospitalComment,
+    rating: useDoctor ? review.doctorRating : review.hospitalRating,
+    context: useDoctor
+      ? `Dr. ${review.doctor?.name || ""}`
+      : review.hospital?.name || "",
+  };
+};
+
 const Testimonials = () => {
+  const dispatch = useDispatch();
+
+  const { featuredReviews } = useSelector((state) => state.review);
+
+  useEffect(() => {
+    dispatch(getFeaturedReviews(6));
+  }, [dispatch]);
+
+  const cards =
+    featuredReviews.length > 0
+      ? featuredReviews.map(toCard)
+      : fallbackTestimonials;
+
   return (
     <section className="bg-slate-50 py-24">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -64,14 +105,14 @@ const Testimonials = () => {
         {/* Cards */}
 
         <div className="mt-16 grid gap-8 lg:grid-cols-3">
-          {testimonials.map((item, index) => (
+          {cards.slice(0, 6).map((item, index) => (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{
                 duration: 0.5,
-                delay: index * 0.2,
+                delay: (index % 3) * 0.2,
               }}
               viewport={{ once: true }}
               className="group rounded-3xl bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
@@ -83,7 +124,11 @@ const Testimonials = () => {
                   <Star
                     key={i}
                     size={18}
-                    className="fill-yellow-400 text-yellow-400"
+                    className={
+                      i < (item.rating || 5)
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-gray-300"
+                    }
                   />
                 ))}
               </div>
@@ -93,20 +138,18 @@ const Testimonials = () => {
               </p>
 
               <div className="mt-8 flex items-center gap-4">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="h-14 w-14 rounded-full object-cover"
-                />
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-lg font-bold text-blue-600">
+                  {item.name.charAt(0).toUpperCase()}
+                </div>
 
                 <div>
                   <h3 className="font-semibold text-slate-900">
                     {item.name}
                   </h3>
 
-                  <p className="text-sm text-gray-500">
-                    {item.location}
-                  </p>
+                  {item.context && (
+                    <p className="text-sm text-gray-500">{item.context}</p>
+                  )}
                 </div>
               </div>
             </motion.div>

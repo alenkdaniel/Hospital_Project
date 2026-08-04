@@ -14,6 +14,8 @@ import {
   ChevronDown,
 } from "lucide-react";
 
+import NotificationBell from "./NotificationBell";
+
 const Navbar = () => {
   const dispatch = useDispatch();
 
@@ -185,6 +187,8 @@ const Navbar = () => {
 
         <div className="hidden lg:flex items-center gap-4">
 
+          {user && <NotificationBell />}
+
           {user ? (
             <div className="relative">
 
@@ -309,14 +313,17 @@ const Navbar = () => {
 
         {/* MOBILE BUTTON */}
 
-        <button
-          onClick={() =>
-            setMobileOpen(!mobileOpen)
-          }
-          className="lg:hidden"
-        >
-          {mobileOpen ? <X /> : <Menu />}
-        </button>
+        <div className="flex items-center gap-3 lg:hidden">
+          {user && <NotificationBell />}
+
+          <button
+            onClick={() =>
+              setMobileOpen(!mobileOpen)
+            }
+          >
+            {mobileOpen ? <X /> : <Menu />}
+          </button>
+        </div>
 
       </div>
             {/* MOBILE MENU */}

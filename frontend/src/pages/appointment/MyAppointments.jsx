@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
@@ -13,11 +13,15 @@ import { motion } from "framer-motion";
 
 import toast from "react-hot-toast";
 
+import ReviewModal from "../../components/ReviewModal";
+
 const MyAppointments = () => {
 
   const dispatch = useDispatch();
 
   const navigate = useNavigate();
+
+  const [reviewTarget, setReviewTarget] = useState(null);
 
   const {
     appointments,
@@ -270,11 +274,41 @@ transition
                 View Details
               </button>
 
+              {item.status === "completed" && !item.isReviewed && (
+                <button
+                  onClick={() => setReviewTarget(item)}
+                  className="
+w-full
+bg-yellow-400
+hover:bg-yellow-500
+text-yellow-900
+py-3
+rounded-xl
+font-semibold
+transition
+"
+                >
+                  ⭐ Leave a Review
+                </button>
+              )}
+
+              {item.status === "completed" && item.isReviewed && (
+                <p className="text-center text-sm font-medium text-green-600">
+                  ✅ Review submitted
+                </p>
+              )}
 
             </div>
           </motion.div>
         ))}
       </div>
+
+      {reviewTarget && (
+        <ReviewModal
+          appointment={reviewTarget}
+          onClose={() => setReviewTarget(null)}
+        />
+      )}
     </div>
   );
 };

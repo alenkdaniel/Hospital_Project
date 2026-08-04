@@ -11,7 +11,6 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   getHospitals,
   searchHospitals,
-  getNearbyHospitals,
   resetHospital,
 } from "../../features/hospital/hospitalSlice";
 
@@ -52,6 +51,12 @@ const Hospitals = () => {
   const [icu, setIcu] = useState(false);
 
   const [acceptingPatients, setAcceptingPatients] = useState(false);
+
+  // ⭐ Coordinates driving the current geo-distance search —
+  // either from the browser's GPS ("Find Near Me") or from the
+  // place the user picked in the Mapbox autocomplete below.
+
+  const [userCoords, setUserCoords] = useState(null);
 
   const ITEMS_PER_PAGE = 5;
 
@@ -171,6 +176,14 @@ const Hospitals = () => {
         icu,
         acceptingPatients,
         distance,
+
+        // Only present when a GPS location or a Mapbox place
+        // has been picked — the backend switches to a proper
+        // $geoNear radius search when these are supplied.
+
+        ...(userCoords
+          ? { lat: userCoords.lat, lng: userCoords.lng }
+          : {}),
       })
     );
   };
@@ -179,17 +192,35 @@ const Hospitals = () => {
 
     const selectedCity = place.text;
 
+    // Mapbox returns [lng, lat] in `center` for every place —
+    // the same response already powering the autocomplete
+    // suggestions, just previously unused beyond the text label.
+
+    const [placeLng, placeLat] = place.center;
+
     setCity(selectedCity);
 
     setSuggestions([]);
 
     setCurrentPage(1);
 
+    setUserCoords({ lat: placeLat, lng: placeLng });
+
+    // The effect below re-fetches automatically once userCoords
+    // changes, but city/search changed in the same tick too, so
+    // fire immediately with the fresh values rather than waiting.
+
     dispatch(
       searchHospitals({
         city: selectedCity,
         search,
         rating,
+        emergency,
+        icu,
+        acceptingPatients,
+        distance,
+        lat: placeLat,
+        lng: placeLng,
       })
     );
 
@@ -232,14 +263,28 @@ const Hospitals = () => {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        const { latitude, longitude } = position.coords;
+
         setCurrentPage(1);
+
+        setCity("");
+
+        setUserCoords({ lat: latitude, lng: longitude });
+
+        // Combine with whatever filters (rating, emergency,
+        // icu, distance radius, etc.) are already active,
+        // rather than the previous behaviour of ignoring them.
+
         dispatch(
-          getNearbyHospitals({
-            lat: position.coords.latitude,
-
-            lng: position.coords.longitude,
-
-            distance: 10000,
+          searchHospitals({
+            search,
+            rating,
+            emergency,
+            icu,
+            acceptingPatients,
+            distance,
+            lat: latitude,
+            lng: longitude,
           }),
         );
       },
@@ -301,6 +346,30 @@ bg-gray-50
         findNearMe={findNearMe}
       />
 
+      {userCoords && (
+        <div className="mx-auto max-w-7xl px-10 md:px-24">
+          <button
+            onClick={() => {
+              setUserCoords(null);
+              setCurrentPage(1);
+              dispatch(
+                searchHospitals({
+                  search,
+                  city,
+                  rating,
+                  emergency,
+                  icu,
+                  acceptingPatients,
+                }),
+              );
+            }}
+            className="mt-4 inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+          >
+            📍 Showing results within {distance} km ✕ Clear
+          </button>
+        </div>
+      )}
+
       {/* LOADING */}
 
       {isLoading && (
@@ -336,11 +405,10 @@ font-bold
           </h2>
         )}
 
-        {/* <div className="grid lg:grid-cols-[320px_1fr] gap-8"> */}
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-[320px_1fr] gap-8">
 
           {/* Left Sidebar */}
-          {/* <div className="sticky top-28 h-fit">
+          <div className="sticky top-28 h-fit">
 
             <HospitalFilters
               rating={rating}
@@ -355,7 +423,7 @@ font-bold
               setAcceptingPatients={setAcceptingPatients}
             />
 
-          </div> */}
+          </div>
 
           {/* Right Side */}
 
@@ -368,6 +436,11 @@ font-bold
                 <HospitalCard
                   key={hospital._id}
                   hospital={hospital}
+                  distance={
+                    hospital.distanceInKm !== undefined
+                      ? `${hospital.distanceInKm} km away`
+                      : undefined
+                  }
                 />
               ))}
 

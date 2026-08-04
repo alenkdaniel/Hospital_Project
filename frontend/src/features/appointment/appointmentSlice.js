@@ -195,6 +195,27 @@ export const completeConsultation = createAsyncThunk(
 );
 
 // =====================================
+// DELETE UNPAID APPOINTMENT
+// Called when the patient cancels the
+// payment step, so the abandoned booking
+// is removed instead of lingering as
+// "pending payment" on hospital/doctor lists
+// =====================================
+
+export const deleteUnpaidAppointment = createAsyncThunk(
+  "appointment/deleteUnpaid",
+
+  async (id, thunkAPI) => {
+    try {
+      await appointmentService.deleteUnpaidAppointment(id);
+      return id;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+// =====================================
 // SLICE
 // =====================================
 
@@ -212,6 +233,22 @@ const appointmentSlice = createSlice({
       state.isError = false;
 
       state.message = "";
+    },
+
+    // Flips isReviewed locally right after a review is
+    // submitted, so the "Leave a Review" button disappears
+    // immediately without needing to refetch the whole list.
+
+    markAsReviewed: (state, action) => {
+      const id = action.payload;
+
+      const target = state.appointments.find((item) => item._id === id);
+
+      if (target) target.isReviewed = true;
+
+      if (state.appointment?._id === id) {
+        state.appointment.isReviewed = true;
+      }
     },
   },
 
@@ -578,10 +615,32 @@ const appointmentSlice = createSlice({
 
           state.message = action.payload;
         },
-      );
+      )
+
+      // =========================
+      // DELETE UNPAID APPOINTMENT
+      // =========================
+
+      .addCase(deleteUnpaidAppointment.fulfilled, (state, action) => {
+        const removedId = action.payload;
+
+        state.appointment = null;
+
+        state.appointments = state.appointments.filter(
+          (item) => item._id !== removedId,
+        );
+
+        state.hospitalAppointments = state.hospitalAppointments.filter(
+          (item) => item._id !== removedId,
+        );
+
+        state.doctorAppointments = state.doctorAppointments.filter(
+          (item) => item._id !== removedId,
+        );
+      });
   },
 });
 
-export const { resetAppointment } = appointmentSlice.actions;
+export const { resetAppointment, markAsReviewed } = appointmentSlice.actions;
 
 export default appointmentSlice.reducer;

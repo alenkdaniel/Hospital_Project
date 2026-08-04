@@ -9,7 +9,8 @@ import { getDoctorById } from "../../features/doctor/doctorSlice";
 import {
   createAppointment,
   resetAppointment,
-  getAvailableSlots
+  getAvailableSlots,
+  deleteUnpaidAppointment,
 } from "../../features/appointment/appointmentSlice";
 
 import {
@@ -149,13 +150,29 @@ const BookAppointment = () => {
 
             navigate("/my");
           },
+          onCancel: () => {
+            // Payment was dismissed/failed — remove the
+            // half-created appointment instead of leaving it
+            // sitting on the hospital/doctor's appointment
+            // list forever as "pending payment".
+
+            dispatch(deleteUnpaidAppointment(appointment._id));
+
+            dispatch(resetAppointment());
+          },
         });
       } catch (error) {
-        toast.error(
-          error?.response?.data?.message ||
-          error?.message ||
-          "Payment failed"
-        );
+        // `unwrap()` throws the plain string passed to
+        // rejectWithValue() in the thunk (see paymentSlice.js),
+        // not an axios error object — so check for that first,
+        // or the real backend message never surfaces.
+
+        const errorMessage =
+          typeof error === "string"
+            ? error
+            : error?.response?.data?.message || error?.message;
+
+        toast.error(errorMessage || "Payment failed");
       }
     };
 

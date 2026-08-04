@@ -16,6 +16,10 @@ import paymentReducer from "../features/payment/paymentSlice";
 
 import superAdminReducer from "../features/superAdmin/superAdminSlice";
 
+import notificationReducer from "../features/notification/notificationSlice";
+
+import reviewReducer from "../features/review/reviewSlice";
+
 // =====================================
 // STORE CONFIGURATION
 // =====================================
@@ -57,6 +61,18 @@ export const store = configureStore({
     // =========================
 
     superAdmin: superAdminReducer,
+
+    // =========================
+    // NOTIFICATION MODULE
+    // =========================
+
+    notification: notificationReducer,
+
+    // =========================
+    // REVIEW MODULE
+    // =========================
+
+    review: reviewReducer,
   },
 
   // =====================================

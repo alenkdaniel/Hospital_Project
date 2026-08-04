@@ -166,7 +166,24 @@ export const searchHospitals = async (req, res) => {
       search,
 
       rating,
-      
+
+      icu,
+
+      acceptingPatients,
+
+      // ⭐ GEO SEARCH — lat/lng come from Mapbox: either the
+      // browser's GPS position, or the coordinates Mapbox
+      // returns for whichever place the user picked in the
+      // city autocomplete (same API already used for the
+      // place suggestions dropdown).
+
+      lat,
+
+      lng,
+
+      // Radius in kilometers — defaults to 25km.
+
+      distance,
     } = req.query;
 
     let filter = {
@@ -197,13 +214,29 @@ export const searchHospitals = async (req, res) => {
       filter.hospitalType = type;
     }
 
-    if (emergency) {
-      filter["emergency.available"] = emergency === "true";
+    if (emergency === "true") {
+      filter["emergency.available"] = true;
     }
 
-    if (search) {
-      filter.$text = {
-        $search: search,
+    if (icu === "true") {
+      // `facilities` is a free-text string array (e.g. "ICU",
+      // "MRI", "Blood Bank") rather than a dedicated boolean
+      // field, so match it the same way the rest of the app does.
+
+      filter.facilities = {
+        $regex: "icu",
+
+        $options: "i",
+      };
+    }
+
+    if (acceptingPatients === "true") {
+      // No dedicated flag exists on the model for this yet —
+      // "accepting patients" is treated as "has open beds",
+      // which is the closest real signal currently tracked.
+
+      filter["beds.available"] = {
+        $gt: 0,
       };
     }
 
@@ -213,11 +246,83 @@ export const searchHospitals = async (req, res) => {
       };
     }
 
-    const hospitals = await Hospital.find(filter)
+    // =====================================
+    // GEO-DISTANCE SEARCH
+    // Only when coordinates were supplied.
+    // Uses the existing 2dsphere index on
+    // `location` via $geoNear, which both
+    // filters by radius AND returns each
+    // hospital's distance — far cheaper and
+    // more accurate than calling an external
+    // API per hospital.
+    // =====================================
 
-      .sort({
-        "rating.average": -1,
-      });
+    if (lat && lng) {
+      const maxDistanceMeters = (Number(distance) || 25) * 1000;
+
+      const geoFilter = { ...filter };
+
+      // $text can't run inside $geoNear's query — fall back to
+      // a plain name match for free-text search in this branch.
+
+      if (search) {
+        geoFilter.name = {
+          $regex: search,
+
+          $options: "i",
+        };
+      }
+
+      const hospitals = await Hospital.aggregate([
+        {
+          $geoNear: {
+            near: {
+              type: "Point",
+
+              coordinates: [Number(lng), Number(lat)],
+            },
+
+            distanceField: "distanceInMeters",
+
+            maxDistance: maxDistanceMeters,
+
+            spherical: true,
+
+            query: geoFilter,
+          },
+        },
+
+        {
+          $addFields: {
+            distanceInKm: {
+              $round: [
+                {
+                  $divide: ["$distanceInMeters", 1000],
+                },
+
+                1,
+              ],
+            },
+          },
+        },
+      ]);
+
+      return res.json(hospitals);
+    }
+
+    // =====================================
+    // REGULAR (NON-GEO) SEARCH
+    // =====================================
+
+    if (search) {
+      filter.$text = {
+        $search: search,
+      };
+    }
+
+    const hospitals = await Hospital.find(filter).sort({
+      "rating.average": -1,
+    });
 
     res.json(hospitals);
   } catch (error) {
@@ -248,25 +353,45 @@ export const getNearbyHospitals = async (req, res) => {
       });
     }
 
-    const hospitals = await Hospital.find({
-      location: {
-        $near: {
-          $geometry: {
+    const hospitals = await Hospital.aggregate([
+      {
+        $geoNear: {
+          near: {
             type: "Point",
 
             coordinates: [Number(lng), Number(lat)],
           },
 
-          $maxDistance: Number(distance),
+          distanceField: "distanceInMeters",
+
+          maxDistance: Number(distance),
+
+          spherical: true,
+
+          query: {
+            "verification.status": "approved",
+
+            isActive: true,
+
+            isDeleted: false,
+          },
         },
       },
 
-      "verification.status": "approved",
+      {
+        $addFields: {
+          distanceInKm: {
+            $round: [
+              {
+                $divide: ["$distanceInMeters", 1000],
+              },
 
-      isActive: true,
-
-      isDeleted: false,
-    });
+              1,
+            ],
+          },
+        },
+      },
+    ]);
 
     res.json(hospitals);
   } catch (error) {

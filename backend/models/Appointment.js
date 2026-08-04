@@ -88,6 +88,19 @@ const appointmentSchema = new mongoose.Schema(
     },
 
     // ===============================
+    // REVIEW STATUS
+    // Set to true once the patient
+    // submits a review for this
+    // appointment (see Review model)
+    // ===============================
+
+    isReviewed: {
+      type: Boolean,
+
+      default: false,
+    },
+
+    // ===============================
     // PAYMENT DETAILS
     // ===============================
 
