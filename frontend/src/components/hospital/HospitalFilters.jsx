@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import {
   Star,
   Ambulance,
@@ -16,7 +17,12 @@ const HospitalFilters = ({
   setIcu,
   acceptingPatients,
   setAcceptingPatients,
+  userCoords,
 }) => {
+  // ⭐ Show visual feedback (smooth dragging) without triggering API calls
+  // The parent Hospitals.jsx has debounced the actual filter, so we can update
+  // the UI instantly for responsive feel
+  const sliderRef = useRef(null);
   return (
     <aside className="
       rounded-3xl
@@ -78,24 +84,44 @@ const HospitalFilters = ({
           Distance
         </h3>
 
-        <input
-          type="range"
-          min="1"
-          max="50"
-          value={distance}
-          onChange={(e) =>
-            setDistance(Number(e.target.value))
-          }
-          className="w-full accent-blue-600"
-        />
+        {!userCoords ? (
+          <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 border border-blue-200">
+            📍 Select a location first to filter by distance
+          </div>
+        ) : (
+          <>
+            <div className="relative">
+              <input
+                ref={sliderRef}
+                type="range"
+                min="1"
+                max="50"
+                value={distance}
+                onChange={(e) =>
+                  setDistance(Number(e.target.value))
+                }
+                className="w-full accent-blue-600 cursor-pointer hover:accent-blue-700 transition-all"
+              />
+            </div>
 
-        <div className="mt-3 flex justify-between text-sm text-gray-500">
-          <span>1 km</span>
+            <div className="mt-3 flex justify-between text-sm text-gray-500">
+              <span>1 km</span>
 
-          <span>{distance} km</span>
+              <span className="font-semibold text-blue-600 transition-colors">
+                {distance} km
+              </span>
 
-          <span>50 km</span>
-        </div>
+              <span>50 km</span>
+            </div>
+
+            <div className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-600 transition-all duration-300"
+                style={{ width: `${(distance / 50) * 100}%` }}
+              />
+            </div>
+          </>
+        )}
 
       </div>
 

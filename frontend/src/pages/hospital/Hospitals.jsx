@@ -64,6 +64,9 @@ const Hospitals = () => {
 
   const isFirstRender = useRef(true);
 
+  // ⭐ Debounce timer for distance slider to prevent glitchy UI
+  const distanceTimeoutRef = useRef(null);
+
   const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
   // =====================================
@@ -134,7 +137,7 @@ const Hospitals = () => {
   }, [currentPage]);
 
   // =====================================
-  // AUTO FILTER
+  // AUTO FILTER (Rating, Emergency, ICU, Accepting Patients)
   // =====================================
 
   useEffect(() => {
@@ -153,8 +156,43 @@ const Hospitals = () => {
     emergency,
     icu,
     acceptingPatients,
-    distance,
   ]);
+
+  // =====================================
+  // DEBOUNCED DISTANCE FILTER
+  // Prevents glitchy UI from rapid slider movements
+  // =====================================
+
+  useEffect(() => {
+
+    if (isFirstRender.current) {
+      return;
+    }
+
+    // ⭐ Distance filter only works with GPS coordinates
+    if (distance !== 25 && !userCoords) {
+      return;
+    }
+
+    // Clear previous timeout
+    if (distanceTimeoutRef.current) {
+      clearTimeout(distanceTimeoutRef.current);
+    }
+
+    // Set new timeout — only apply filter after user stops dragging (500ms)
+    distanceTimeoutRef.current = setTimeout(() => {
+      setCurrentPage(1);
+      fetchHospitals();
+    }, 500);
+
+    // Cleanup
+    return () => {
+      if (distanceTimeoutRef.current) {
+        clearTimeout(distanceTimeoutRef.current);
+      }
+    };
+
+  }, [distance, userCoords]);
 
   // const getContextValue = (place, type) => {
   //   return (
@@ -175,14 +213,13 @@ const Hospitals = () => {
         emergency,
         icu,
         acceptingPatients,
-        distance,
 
         // Only present when a GPS location or a Mapbox place
         // has been picked — the backend switches to a proper
         // $geoNear radius search when these are supplied.
 
         ...(userCoords
-          ? { lat: userCoords.lat, lng: userCoords.lng }
+          ? { lat: userCoords.lat, lng: userCoords.lng, distance }
           : {}),
       })
     );
@@ -218,7 +255,7 @@ const Hospitals = () => {
         emergency,
         icu,
         acceptingPatients,
-        distance,
+        distance, // ⭐ Include distance when we have coordinates
         lat: placeLat,
         lng: placeLng,
       })
@@ -282,7 +319,7 @@ const Hospitals = () => {
             emergency,
             icu,
             acceptingPatients,
-            distance,
+            distance, // ⭐ Include current distance filter
             lat: latitude,
             lng: longitude,
           }),
@@ -351,6 +388,7 @@ bg-gray-50
           <button
             onClick={() => {
               setUserCoords(null);
+              setDistance(25); // ⭐ Reset to default when clearing location
               setCurrentPage(1);
               dispatch(
                 searchHospitals({
@@ -421,6 +459,7 @@ font-bold
               setIcu={setIcu}
               acceptingPatients={acceptingPatients}
               setAcceptingPatients={setAcceptingPatients}
+              userCoords={userCoords}
             />
 
           </div>

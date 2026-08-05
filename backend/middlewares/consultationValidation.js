@@ -56,7 +56,7 @@ export const consultationValidation = [
     .trim(),
 
   body("medicines.*.instructions")
-    .optional()
+    .optional()                                    
     .trim(),
 
   body("tests")
