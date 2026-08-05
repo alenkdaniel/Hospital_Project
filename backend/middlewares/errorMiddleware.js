@@ -1,5 +1,3 @@
-
-
 export const notFound = (req, res, next) => {
   const error = new Error(`Route not found - ${req.originalUrl}`);
 
@@ -9,20 +7,15 @@ export const notFound = (req, res, next) => {
 };
 
 export const errorHandler = (err, req, res, next) => {
-
   let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
 
   let message = err.message;
-
-
 
   if (err.name === "CastError") {
     statusCode = 404;
 
     message = "Resource not found";
   }
-
-
 
   if (err.code === 11000) {
     statusCode = 400;
@@ -31,8 +24,6 @@ export const errorHandler = (err, req, res, next) => {
 
     message = `${field} already exists`;
   }
-
-
 
   if (err.name === "ValidationError") {
     statusCode = 400;
@@ -44,23 +35,17 @@ export const errorHandler = (err, req, res, next) => {
       .join(", ");
   }
 
-
-
   if (err.name === "JsonWebTokenError") {
     statusCode = 401;
 
     message = "Invalid token";
   }
 
-
-
   if (err.name === "TokenExpiredError") {
     statusCode = 401;
 
     message = "Token expired";
   }
-
-
 
   if (err.code === "LIMIT_FILE_SIZE") {
     statusCode = 400;

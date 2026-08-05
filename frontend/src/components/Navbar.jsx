@@ -47,6 +47,10 @@ const Navbar = () => {
       path: "/hospitals",
     },
     {
+      name: "Nearby Hospitals",
+      path: "/nearby-hospitals",
+    },
+    {
       name: "About",
       path: "/about",
     },
@@ -54,10 +58,9 @@ const Navbar = () => {
 
   const linkStyle = ({ isActive }) =>
     `relative pb-2 text-[16px] font-medium transition-all duration-300
-    ${
-      isActive
-        ? "text-blue-600 after:absolute after:left-0 after:-bottom-2 after:h-0.5 after:w-full after:bg-blue-600"
-        : "text-gray-600 hover:text-blue-600"
+    ${isActive
+      ? "text-blue-600 after:absolute after:left-0 after:-bottom-2 after:h-0.5 after:w-full after:bg-blue-600"
+      : "text-gray-600 hover:text-blue-600"
     }`;
 
   return (
@@ -326,7 +329,7 @@ const Navbar = () => {
         </div>
 
       </div>
-            {/* MOBILE MENU */}
+      {/* MOBILE MENU */}
 
       {mobileOpen && (
         <div className="absolute left-0 top-20 w-full border-t bg-white shadow-xl lg:hidden">
@@ -338,10 +341,9 @@ const Navbar = () => {
                 to={item.path}
                 onClick={() => setMobileOpen(false)}
                 className={({ isActive }) =>
-                  `rounded-lg px-4 py-3 transition ${
-                    isActive
-                      ? "bg-blue-50 font-semibold text-blue-600"
-                      : "text-gray-700 hover:bg-gray-100"
+                  `rounded-lg px-4 py-3 transition ${isActive
+                    ? "bg-blue-50 font-semibold text-blue-600"
+                    : "text-gray-700 hover:bg-gray-100"
                   }`
                 }
               >
