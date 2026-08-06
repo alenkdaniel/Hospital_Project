@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import { Link, NavLink } from "react-router-dom";
 
@@ -23,12 +23,39 @@ const Navbar = () => {
 
   const [profileOpen, setProfileOpen] = useState(false);
 
+  const [manageOpen, setManageOpen] = useState(false);
+
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const profileRef = useRef(null);
+
+  const manageRef = useRef(null);
+
+  // Close either dropdown when clicking outside of it.
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
+      }
+
+      if (manageRef.current && !manageRef.current.contains(e.target)) {
+        setManageOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleLogout = () => {
     dispatch(logout());
 
     setProfileOpen(false);
+
+    setManageOpen(false);
 
     setMobileOpen(false);
   };
@@ -43,16 +70,41 @@ const Navbar = () => {
       path: "/doctors",
     },
     {
+      // "Find Near Me" inside the Hospitals page now covers
+      // what the old standalone "Nearby Hospitals" link did,
+      // so it isn't listed separately here anymore.
       name: "Hospitals",
       path: "/hospitals",
     },
     {
-      name: "Nearby Hospitals",
-      path: "/nearby-hospitals",
-    },
-    {
       name: "About",
       path: "/about",
+    },
+  ];
+
+  // Hospital-admin-only links, grouped into one "Manage Hospital"
+  // dropdown instead of 5 separate top-level nav items — that's
+  // what was pushing the navbar onto two cramped rows.
+  const hospitalAdminLinks = [
+    {
+      name: "Dashboard",
+      path: "/hospital-admin",
+    },
+    {
+      name: "Hospital",
+      path: "/hospital/add-hospital",
+    },
+    {
+      name: "Edit Hospital",
+      path: "/hospital/edit-hospital",
+    },
+    {
+      name: "Add Doctor",
+      path: "/hospital/add-doctor",
+    },
+    {
+      name: "Appointments",
+      path: "/hospital/appointments",
     },
   ];
 
@@ -136,35 +188,51 @@ const Navbar = () => {
           )}
 
           {user?.role === "hospital_admin" && (
-            <>
-              <NavLink
-                to="/hospital-admin"
-                className={linkStyle}
+            <div className="relative" ref={manageRef}>
+              <button
+                type="button"
+                onClick={() => setManageOpen(!manageOpen)}
+                className="flex items-center gap-1 text-[16px] font-medium text-gray-600 transition-colors hover:text-blue-600"
               >
-                Dashboard
-              </NavLink>
+                Manage Hospital
+                <ChevronDown
+                  size={16}
+                  className={`transition-transform ${manageOpen ? "rotate-180" : ""}`}
+                />
+              </button>
 
-              <NavLink
-                to="/hospital/add-hospital"
-                className={linkStyle}
-              >
-                Hospital
-              </NavLink>
-
-              <NavLink
-                to="/hospital/add-doctor"
-                className={linkStyle}
-              >
-                Add Doctor
-              </NavLink>
-
-              <NavLink
-                to="/hospital/appointments"
-                className={linkStyle}
-              >
-                Appointments
-              </NavLink>
-            </>
+              {manageOpen && (
+                <div
+                  className="
+                  absolute
+                  left-0
+                  top-10
+                  w-56
+                  rounded-2xl
+                  border
+                  bg-white
+                  p-2
+                  shadow-xl
+                  "
+                >
+                  {hospitalAdminLinks.map((item) => (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setManageOpen(false)}
+                      className={({ isActive }) =>
+                        `block rounded-xl px-4 py-3 text-sm transition ${isActive
+                          ? "bg-blue-50 font-semibold text-blue-600"
+                          : "text-gray-700 hover:bg-gray-100"
+                        }`
+                      }
+                    >
+                      {item.name}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {user?.role === "doctor" && (
@@ -193,7 +261,7 @@ const Navbar = () => {
           {user && <NotificationBell />}
 
           {user ? (
-            <div className="relative">
+            <div className="relative" ref={profileRef}>
 
               <button
                 onClick={() =>
@@ -377,37 +445,20 @@ const Navbar = () => {
 
             {user?.role === "hospital_admin" && (
               <>
-                <NavLink
-                  to="/hospital-admin"
-                  onClick={() => setMobileOpen(false)}
-                  className="rounded-lg px-4 py-3 hover:bg-gray-100"
-                >
-                  Dashboard
-                </NavLink>
+                <p className="mt-2 px-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  Manage Hospital
+                </p>
 
-                <NavLink
-                  to="/hospital/add-hospital"
-                  onClick={() => setMobileOpen(false)}
-                  className="rounded-lg px-4 py-3 hover:bg-gray-100"
-                >
-                  Add Hospital
-                </NavLink>
-
-                <NavLink
-                  to="/hospital/add-doctor"
-                  onClick={() => setMobileOpen(false)}
-                  className="rounded-lg px-4 py-3 hover:bg-gray-100"
-                >
-                  Add Doctor
-                </NavLink>
-
-                <NavLink
-                  to="/hospital/appointments"
-                  onClick={() => setMobileOpen(false)}
-                  className="rounded-lg px-4 py-3 hover:bg-gray-100"
-                >
-                  Appointments
-                </NavLink>
+                {hospitalAdminLinks.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-lg px-4 py-3 hover:bg-gray-100"
+                  >
+                    {item.name}
+                  </NavLink>
+                ))}
               </>
             )}
 

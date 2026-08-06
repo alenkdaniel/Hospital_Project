@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 // =====================================
 // COMPONENTS
@@ -62,8 +62,6 @@ import RescheduleAppointment from "./pages/appointment/RescheduleAppointment";
 
 import Hospitals from "./pages/hospital/Hospitals";
 
-import NearbyHospitals from "./pages/hospital/NearbyHospitals";
-
 import HospitalDetails from "./pages/hospital/HospitalDetails";
 
 import HospitalAdminDashboard from "./pages/hospital/HospitalDashboard";
@@ -71,6 +69,8 @@ import HospitalAdminDashboard from "./pages/hospital/HospitalDashboard";
 import HospitalAppointments from "./pages/hospital/HospitalAppointments";
 
 import AddHospital from "./pages/hospital/AddHospital";
+
+import EditHospital from "./pages/hospital/EditHospital";
 
 import HospitalVerification from "./pages/hospital/HospitalVerification";
 
@@ -117,7 +117,14 @@ PUBLIC
 
           <Route path="/hospitals" element={<Hospitals />} />
 
-          <Route path="/nearby-hospitals" element={<NearbyHospitals />} />
+          {/* "Nearby Hospitals" was merged into the Hospitals
+              list page (its "Find Near Me" search bar + distance
+              filter now cover this). Old links/bookmarks still
+              land somewhere useful instead of a 404. */}
+          <Route
+            path="/nearby-hospitals"
+            element={<Navigate to="/hospitals" replace />}
+          />
 
           <Route path="/hospitals/:id" element={<HospitalDetails />} />
 
@@ -277,6 +284,15 @@ HOSPITAL ADMIN
             element={
               <ProtectedRoute allowedRoles={["hospital_admin"]}>
                 <AddHospital />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/hospital/edit-hospital"
+            element={
+              <ProtectedRoute allowedRoles={["hospital_admin"]}>
+                <EditHospital />
               </ProtectedRoute>
             }
           />

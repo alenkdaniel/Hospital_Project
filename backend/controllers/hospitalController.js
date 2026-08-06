@@ -36,6 +36,15 @@ export const createHospital = async (req, res) => {
       ? req.files.certificate[0].path
       : "";
 
+    // ⭐ RATING IS PATIENT-DRIVEN ONLY
+    // Hospital admins never set their own rating — it is
+    // always computed from Review documents (see
+    // reviewController.recomputeHospitalRating). Strip it
+    // here even though the create form never sends it, so a
+    // direct API call (Postman, etc.) can't inject one.
+
+    delete req.body.rating;
+
     // CREATE
 
     const hospital = await Hospital.create({
@@ -456,11 +465,14 @@ export const updateHospital = async (req, res) => {
       });
     }
 
-    // protect approval
+    // protect approval + rating
+    // (rating is patient-review-driven only — see createHospital)
 
     delete req.body.verification;
 
     delete req.body.createdBy;
+
+    delete req.body.rating;
 
     if (req.files?.images) {
       req.body.images = req.files.images.map((file) => ({
@@ -468,6 +480,16 @@ export const updateHospital = async (req, res) => {
 
         publicId: file.filename,
       }));
+    }
+
+    // Certificate re-upload on edit — kept separate from the
+    // `verification` object above (which is fully stripped) so
+    // this doesn't touch verification.status. Dot-notation key
+    // updates just this one nested field.
+
+    if (req.files?.certificate) {
+      req.body["verification.documents.certificateUrl"] =
+        req.files.certificate[0].path;
     }
 
     const updated = await Hospital.findByIdAndUpdate(

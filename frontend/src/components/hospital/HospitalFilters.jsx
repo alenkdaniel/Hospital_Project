@@ -95,7 +95,7 @@ const HospitalFilters = ({
                 ref={sliderRef}
                 type="range"
                 min="1"
-                max="50"
+                max="100"
                 value={distance}
                 onChange={(e) =>
                   setDistance(Number(e.target.value))
@@ -111,13 +111,13 @@ const HospitalFilters = ({
                 {distance} km
               </span>
 
-              <span>50 km</span>
+              <span>100 km</span>
             </div>
 
             <div className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
               <div
                 className="h-full bg-blue-600 transition-all duration-300"
-                style={{ width: `${(distance / 50) * 100}%` }}
+                style={{ width: `${(distance / 100) * 100}%` }}
               />
             </div>
           </>

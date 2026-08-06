@@ -259,6 +259,20 @@ mb-6
             </h2>
 
             <Link
+              to="/hospital/edit-hospital"
+              className="
+inline-block
+bg-orange-500
+text-white
+px-8
+py-4
+rounded-xl
+"
+            >
+              ✏️ Edit Hospital
+            </Link>
+
+            <Link
               to="/hospital/add-doctor"
               className="
 inline-block

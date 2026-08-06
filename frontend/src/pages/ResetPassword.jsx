@@ -304,8 +304,8 @@ const ResetPassword = () => {
                         <Link
                             to={loading || resending ? "#" : "/login"}
                             className={`font-medium text-blue-600 hover:text-blue-700 ${loading || resending
-                                    ? "pointer-events-none opacity-50"
-                                    : ""
+                                ? "pointer-events-none opacity-50"
+                                : ""
                                 }`}
                         >
                             ← Back to Login
