@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
-import { createDoctor, resetDoctor } from "../../features/doctor/doctorSlice";
+import {
+  getDoctorById,
+  updateDoctor,
+  resetDoctor,
+} from "../../features/doctor/doctorSlice";
 
 import toast from "react-hot-toast";
 import DoctorHeader from "../../components/doctor/DoctorHeader";
@@ -13,20 +17,24 @@ import ContactCard from "../../components/doctor/ContactCard";
 import WeeklyAvailabilityCard from "../../components/doctor/WeeklyAvailabilityCard";
 import AboutCard from "../../components/doctor/AboutCard";
 
-const AddDoctor = () => {
+const EditDoctor = () => {
   const dispatch = useDispatch();
 
   const navigate = useNavigate();
 
-  const {
-    isLoading,
+  const { id } = useParams();
 
-    isSuccess,
+  // Local, page-only flags — kept separate from the shared
+  // doctor slice isLoading/isSuccess/isError, since those are
+  // reused by getDoctorById, createDoctor AND updateDoctor.
+  // Using dispatch(...).unwrap() below gives each action its
+  // own unambiguous result instead of relying on those.
 
-    isError,
+  const [pageLoading, setPageLoading] = useState(true);
 
-    message,
-  } = useSelector((state) => state.doctor);
+  const [saving, setSaving] = useState(false);
+
+  const [existingImage, setExistingImage] = useState("");
 
   const [form, setForm] = useState({
     name: "",
@@ -61,6 +69,82 @@ const AddDoctor = () => {
   const [doctorImage, setDoctorImage] = useState(null);
 
   // =================================
+  // PREFILL FORM FROM A LOADED DOCTOR
+  // =================================
+
+  const prefillForm = (doc) => {
+    const workingSchedule = (doc.weeklySchedule || []).filter(
+      (s) => s.isWorking === true || s.isWorking === "true",
+    );
+
+    setForm({
+      name: doc.name || "",
+
+      gender: doc.gender || "",
+
+      department: doc.department || "",
+
+      specialization: doc.specialization || "",
+
+      qualification: doc.qualification || "",
+
+      licenseNumber: doc.licenseNumber || "",
+
+      experience: doc.experience ?? "",
+
+      email: doc.contact?.email || "",
+
+      phone: doc.contact?.phone || "",
+
+      consultationFee: doc.consultationFee ?? "",
+
+      availableDays: workingSchedule.map((s) => s.day).join(","),
+
+      start: workingSchedule[0]?.startTime || "09:00",
+
+      end: workingSchedule[0]?.endTime || "17:00",
+
+      about: doc.about || "",
+    });
+
+    setExistingImage(doc.image || "");
+  };
+
+  // =================================
+  // LOAD EXISTING DOCTOR
+  // =================================
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDoctor = async () => {
+      try {
+        const data = await dispatch(getDoctorById(id)).unwrap();
+
+        if (cancelled) return;
+
+        prefillForm(data);
+      } catch (error) {
+        if (cancelled) return;
+
+        toast.error(error || "Failed to load doctor");
+
+        navigate("/hospital-admin");
+      } finally {
+        if (!cancelled) setPageLoading(false);
+      }
+    };
+
+    loadDoctor();
+
+    return () => {
+      cancelled = true;
+
+      dispatch(resetDoctor());
+    };
+  }, [dispatch, id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // =================================
   // HANDLE CHANGE
   // =================================
 
@@ -71,7 +155,6 @@ const AddDoctor = () => {
       [e.target.name]: e.target.value,
     });
   };
-
 
   const buildDoctorFormData = () => {
     const formData = new FormData();
@@ -94,7 +177,7 @@ const AddDoctor = () => {
     // Weekly Schedule
     const days = form.availableDays
       .split(",")
-      .map(day => day.trim())
+      .map((day) => day.trim())
       .filter(Boolean);
 
     days.forEach((day, index) => {
@@ -105,11 +188,15 @@ const AddDoctor = () => {
       formData.append(`weeklySchedule[${index}][slotDuration]`, 10);
     });
 
-    formData.append("doctorImage", doctorImage);
+    // Only attach a new image if the admin actually picked one —
+    // omitting it leaves the doctor's existing Cloudinary image
+    // exactly as it is.
+    if (doctorImage) {
+      formData.append("doctorImage", doctorImage);
+    }
 
     return formData;
   };
-
 
   const validateForm = () => {
     if (!form.name.trim()) {
@@ -181,45 +268,35 @@ const AddDoctor = () => {
       return;
     }
 
-    if (!doctorImage) {
-      toast.error("Upload doctor image");
-      return;
-    }
+    setSaving(true);
 
     try {
       const formData = buildDoctorFormData();
 
-      for (const [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
+      await dispatch(
+        updateDoctor({
+          id,
+          doctorData: formData,
+        }),
+      ).unwrap();
 
-      await dispatch(createDoctor(formData)).unwrap();
+      toast.success("Doctor updated successfully");
 
+      navigate("/hospital-admin");
     } catch (error) {
-      console.error(error);
-      toast.error(error || "Failed to create doctor");
+      toast.error(error || "Failed to update doctor");
+    } finally {
+      setSaving(false);
     }
   };
 
-  // =================================
-  // SUCCESS ERROR
-  // =================================
-
-  useEffect(() => {
-    if (isError) {
-      toast.error(message);
-    }
-
-    if (isSuccess) {
-      toast.success("Doctor added successfully");
-
-      navigate("/hospital-admin");
-    }
-
-    return () => {
-      dispatch(resetDoctor());
-    };
-  }, [isSuccess, isError, message, dispatch, navigate]);
+  if (pageLoading) {
+    return (
+      <div className="pt-32 text-center text-2xl font-bold">
+        Loading doctor...
+      </div>
+    );
+  }
 
   return (
     <div
@@ -237,11 +314,12 @@ px-6
 w-full
 max-w-7xl
 space-y-8
+mx-auto
 "
       >
         <DoctorHeader
-          isLoading={isLoading}
-          mode="add"
+          isLoading={saving}
+          mode="edit"
           onCancel={() => navigate("/hospital-admin")}
         />
 
@@ -255,6 +333,7 @@ space-y-8
           handleChange={handleChange}
           doctorImage={doctorImage}
           setDoctorImage={setDoctorImage}
+          existingImage={existingImage}
         />
 
         <WeeklyAvailabilityCard
@@ -266,10 +345,9 @@ space-y-8
           form={form}
           handleChange={handleChange}
         />
-
       </form>
     </div>
   );
 };
 
-export default AddDoctor;
+export default EditDoctor;

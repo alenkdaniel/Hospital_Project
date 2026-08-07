@@ -74,6 +74,13 @@ const hospitalSchema = new mongoose.Schema(
         index: true,
       },
 
+      district: {
+        type: String,
+        trim: true,
+        default: "",
+        index: true,
+      },
+
       state: {
         type: String,
         default: "",
@@ -270,6 +277,8 @@ hospitalSchema.pre(
 
       this.address?.city,
 
+      this.address?.district,
+
       ...(this.departments || []),
     ]
 
@@ -288,6 +297,14 @@ hospitalSchema.index({
 });
 
 hospitalSchema.index({
+  "address.city": 1,
+
+  "verification.status": 1,
+});
+
+hospitalSchema.index({
+  "address.district": 1,
+
   "address.city": 1,
 
   "verification.status": 1,

@@ -104,6 +104,8 @@ const AddHospital = () => {
 
     city: "",
 
+    district: "",
+
     state: "",
 
     pincode: "",
@@ -206,6 +208,12 @@ const AddHospital = () => {
     ...prev,
 
     city: getContextValue(place, "place"),
+
+    // ⭐ Mapbox returns the enclosing district/county under the
+    // "district" context id for Indian addresses (falls back to
+    // empty so the admin can still type it manually below).
+
+    district: getContextValue(place, "district"),
 
     state: getContextValue(place, "region"),
 
@@ -316,6 +324,8 @@ const AddHospital = () => {
     formData.append("address[street]", form.street);
 
     formData.append("address[city]", form.city);
+
+    formData.append("address[district]", form.district);
 
     formData.append("address[state]", form.state);
 
@@ -525,6 +535,8 @@ mb-8
           ["street", "Street"],
 
           ["city", "City"],
+
+          ["district", "District"],
 
           ["state", "State"],
 

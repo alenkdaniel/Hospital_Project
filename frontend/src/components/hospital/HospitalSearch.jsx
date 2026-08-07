@@ -10,6 +10,8 @@ const HospitalSearch = ({
   setSearch,
   city,
   setCity,
+  district,
+  setDistrict,
   suggestions,
   searchLoading,
   handleSelectLocation,
@@ -20,7 +22,7 @@ const HospitalSearch = ({
     <section className="bg-white border-b">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
 
-        <div className="grid lg:grid-cols-[1.4fr_1.4fr_220px] gap-5">
+        <div className="grid lg:grid-cols-[1.1fr_1.1fr_1fr_220px] gap-5">
 
           {/* Search */}
 
@@ -156,6 +158,41 @@ const HospitalSearch = ({
                 ))}
               </div>
             )}
+          </div>
+
+          {/* District */}
+
+          <div>
+            <label className="block mb-3 text-sm font-semibold text-gray-700">
+              District
+            </label>
+
+            <div className="relative">
+
+              <MapPin
+                size={20}
+                className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+
+              <input
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                placeholder="e.g. Ernakulam"
+                className="
+                w-full
+                rounded-2xl
+                border
+                border-gray-300
+                bg-white
+                py-4
+                pl-14
+                pr-5
+                outline-none
+                transition
+                focus:border-blue-600
+                "
+              />
+            </div>
           </div>
 
           {/* Buttons */}

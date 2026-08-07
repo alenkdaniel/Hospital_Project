@@ -48,16 +48,6 @@ function Register() {
       toast.error(message);
     }
 
-    // if (isSuccess && user) {
-    //   toast.success("Registration successful");
-
-    //   if (user.role === "hospital_admin") {
-    //     navigate("/hospital-admin");
-    //   } else {
-    //     navigate("/dashboard");
-    //   }
-    // }
-
     if(isSuccess){
       console.log("Redux Register Email:", registerEmail);
       toast.success(message)

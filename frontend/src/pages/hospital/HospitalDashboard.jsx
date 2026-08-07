@@ -192,48 +192,56 @@ mt-10
 "
           >
             {[
-              ["🏥", "Hospitals", 1],
+              ["🏥", "Hospitals", 1, null],
 
               // ["👨‍⚕️", "Doctors", doctors?.length || 0],
 
-              ["👨‍⚕️", "Doctors", myDoctors?.length || 0],
+              ["👨‍⚕️", "Doctors", myDoctors?.length || 0, "/hospital/doctors"],
 
-              ["📅", "Appointments", hospitalAppointments?.length || 0],
+              ["📅", "Appointments", hospitalAppointments?.length || 0, null],
 
-              ["⭐", "Rating", hospital.rating?.average || 0],
-            ].map((item, index) => (
-              <div
-                key={index}
-                className="
-bg-white
-rounded-3xl
-p-8
-shadow-lg
-"
-              >
-                <div className="text-5xl">{item[0]}</div>
+              ["⭐", "Rating", hospital.rating?.average || 0, null],
+            ].map((item, index) => {
+              const cardContent = (
+                <>
+                  <div className="text-5xl">{item[0]}</div>
 
-                <h2
-                  className="
+                  <h2
+                    className="
 mt-4
 font-bold
 text-xl
 "
-                >
-                  {item[1]}
-                </h2>
+                  >
+                    {item[1]}
+                  </h2>
 
-                <p
-                  className="
+                  <p
+                    className="
 text-blue-600
 text-3xl
 font-bold
 "
-                >
-                  {item[2]}
-                </p>
-              </div>
-            ))}
+                  >
+                    {item[2]}
+                  </p>
+                </>
+              );
+
+              const cardClassName =
+                "bg-white rounded-3xl p-8 shadow-lg" +
+                (item[3] ? " hover:shadow-xl transition cursor-pointer" : "");
+
+              return item[3] ? (
+                <Link key={index} to={item[3]} className={cardClassName}>
+                  {cardContent}
+                </Link>
+              ) : (
+                <div key={index} className={cardClassName}>
+                  {cardContent}
+                </div>
+              );
+            })}
           </div>
 
           {/* ACTION */}
@@ -284,6 +292,20 @@ rounded-xl
 "
             >
               + Add Doctor
+            </Link>
+
+            <Link
+              to="/hospital/doctors"
+              className="
+inline-block
+bg-teal-600
+text-white
+px-8
+py-4
+rounded-xl
+"
+            >
+              👨‍⚕️ Manage Doctors
             </Link>
 
             <Link

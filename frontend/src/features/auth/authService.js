@@ -12,14 +12,6 @@ const register = async (userData) => {
     },
   });
 
-  // if (response.data.accessToken) {
-  //   localStorage.setItem("accessToken", response.data.accessToken);
-
-  //   localStorage.setItem("refreshToken", response.data.refreshToken);
-
-  //   localStorage.setItem("user", JSON.stringify(response.data));
-  // }
-
   
 
   return response.data;

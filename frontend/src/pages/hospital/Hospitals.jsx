@@ -38,6 +38,13 @@ const Hospitals = () => {
 
   const [city, setCity] = useState("");
 
+  // ⭐ DISTRICT SEARCH — separate from `city` on purpose: a
+  // district search should pull in hospitals from every city
+  // inside that district, so it can't just reuse the city
+  // filter. Results are grouped by city for display below.
+
+  const [district, setDistrict] = useState("");
+
   const [suggestions, setSuggestions] = useState([]);
 
   const [searchLoading, setSearchLoading] = useState(false);
@@ -209,6 +216,7 @@ const Hospitals = () => {
       searchHospitals({
         search,
         city,
+        district,
         rating,
         emergency,
         icu,
@@ -251,6 +259,7 @@ const Hospitals = () => {
       searchHospitals({
         city: selectedCity,
         search,
+        district,
         rating,
         emergency,
         icu,
@@ -315,6 +324,7 @@ const Hospitals = () => {
         dispatch(
           searchHospitals({
             search,
+            district,
             rating,
             emergency,
             icu,
@@ -344,6 +354,30 @@ const Hospitals = () => {
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+
+  // =====================================
+  // DISTRICT SEARCH — GROUP RESULTS BY CITY
+  // A district spans multiple cities, so instead of one flat
+  // paginated list we show every city that has a match, each
+  // with its own hospitals underneath. Backend already sorts
+  // district results by city, so this just buckets them.
+  // =====================================
+
+  const isDistrictSearch = district.trim().length > 0;
+
+  const hospitalsByCity = isDistrictSearch
+    ? hospitals.reduce((groups, hospital) => {
+        const cityName = hospital.address?.city || "Other";
+
+        if (!groups[cityName]) {
+          groups[cityName] = [];
+        }
+
+        groups[cityName].push(hospital);
+
+        return groups;
+      }, {})
+    : {};
 
   if (isError) {
 
@@ -376,6 +410,8 @@ bg-gray-50
         setSearch={setSearch}
         city={city}
         setCity={setCity}
+        district={district}
+        setDistrict={setDistrict}
         suggestions={suggestions}
         searchLoading={searchLoading}
         handleSelectLocation={handleSelectLocation}
@@ -394,6 +430,7 @@ bg-gray-50
                 searchHospitals({
                   search,
                   city,
+                  district,
                   rating,
                   emergency,
                   icu,
@@ -471,21 +508,59 @@ font-bold
 
             <div className="space-y-8">
 
-              {currentHospitals.map((hospital) => (
-                <HospitalCard
-                  key={hospital._id}
-                  hospital={hospital}
-                  distance={
-                    hospital.distanceInKm !== undefined
-                      ? `${hospital.distanceInKm} km away`
-                      : undefined
-                  }
-                />
-              ))}
+              {isDistrictSearch ? (
+
+                // ⭐ DISTRICT VIEW — grouped by city, no pagination:
+                // the point of a district search is to see every
+                // city's hospitals at a glance.
+
+                Object.entries(hospitalsByCity).map(([cityName, cityHospitals]) => (
+                  <div key={cityName}>
+
+                    <h3 className="mb-4 flex items-center gap-2 text-xl font-bold text-gray-800">
+                      {cityName}
+
+                      <span className="text-sm font-normal text-gray-500">
+                        ({cityHospitals.length} {cityHospitals.length === 1 ? "hospital" : "hospitals"})
+                      </span>
+                    </h3>
+
+                    <div className="space-y-6 mb-10">
+                      {cityHospitals.map((hospital) => (
+                        <HospitalCard
+                          key={hospital._id}
+                          hospital={hospital}
+                          distance={
+                            hospital.distanceInKm !== undefined
+                              ? `${hospital.distanceInKm} km away`
+                              : undefined
+                          }
+                        />
+                      ))}
+                    </div>
+
+                  </div>
+                ))
+
+              ) : (
+
+                currentHospitals.map((hospital) => (
+                  <HospitalCard
+                    key={hospital._id}
+                    hospital={hospital}
+                    distance={
+                      hospital.distanceInKm !== undefined
+                        ? `${hospital.distanceInKm} km away`
+                        : undefined
+                    }
+                  />
+                ))
+
+              )}
 
             </div>
 
-            {totalPages > 1 && (
+            {!isDistrictSearch && totalPages > 1 && (
 
               <div className="mt-12 flex justify-center">
 

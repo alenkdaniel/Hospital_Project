@@ -166,6 +166,13 @@ export const searchHospitals = async (req, res) => {
     const {
       city,
 
+      // ⭐ DISTRICT SEARCH — matches every hospital whose
+      // address.district matches, regardless of which city
+      // inside that district it's in. Combined with `city`
+      // (both can be supplied together) via a plain AND.
+
+      district,
+
       department,
 
       type,
@@ -206,6 +213,14 @@ export const searchHospitals = async (req, res) => {
     if (city) {
       filter["address.city"] = {
         $regex: city,
+
+        $options: "i",
+      };
+    }
+
+    if (district) {
+      filter["address.district"] = {
+        $regex: district,
 
         $options: "i",
       };
@@ -255,6 +270,25 @@ export const searchHospitals = async (req, res) => {
       };
     }
 
+    // ⭐ FREE-TEXT SEARCH ("Specialty or Hospital Name" box)
+    // Matches partial, case-insensitive text against the
+    // hospital's name OR its departments (specialties) OR its
+    // city/district — built once here so both the geo and
+    // non-geo branches below use the exact same matching logic.
+    // (Previously this used MongoDB's $text operator, which only
+    // does whole-word/stemmed matches — typing "Cardio" would
+    // never match "Cardiology" — and the geo branch separately
+    // only checked the hospital name, ignoring specialties
+    // entirely once a city/location had been picked.)
+
+    const searchOr = search
+      ? [
+          { name: { $regex: search, $options: "i" } },
+          { departments: { $regex: search, $options: "i" } },
+          { searchKeywords: { $regex: search, $options: "i" } },
+        ]
+      : null;
+
     // =====================================
     // GEO-DISTANCE SEARCH
     // Only when coordinates were supplied.
@@ -271,15 +305,12 @@ export const searchHospitals = async (req, res) => {
 
       const geoFilter = { ...filter };
 
-      // $text can't run inside $geoNear's query — fall back to
-      // a plain name match for free-text search in this branch.
+      // $text can't run inside $geoNear's query, but a plain
+      // $or of $regex clauses works fine — same matching as the
+      // non-geo branch below.
 
-      if (search) {
-        geoFilter.name = {
-          $regex: search,
-
-          $options: "i",
-        };
+      if (searchOr) {
+        geoFilter.$or = searchOr;
       }
 
       const hospitals = await Hospital.aggregate([
@@ -314,6 +345,23 @@ export const searchHospitals = async (req, res) => {
             },
           },
         },
+
+        // District search with no specific city — sort by city
+        // first so hospitals from the same city land next to
+        // each other and the frontend can group them under a
+        // city heading.
+
+        ...(district && !city
+          ? [
+              {
+                $sort: {
+                  "address.city": 1,
+
+                  "rating.average": -1,
+                },
+              },
+            ]
+          : []),
       ]);
 
       return res.json(hospitals);
@@ -323,15 +371,25 @@ export const searchHospitals = async (req, res) => {
     // REGULAR (NON-GEO) SEARCH
     // =====================================
 
-    if (search) {
-      filter.$text = {
-        $search: search,
-      };
+    if (searchOr) {
+      filter.$or = searchOr;
     }
 
-    const hospitals = await Hospital.find(filter).sort({
-      "rating.average": -1,
-    });
+    // District search (no specific city) — group-friendly sort
+    // by city first, then rating within each city.
+
+    const sortBy =
+      district && !city
+        ? {
+            "address.city": 1,
+
+            "rating.average": -1,
+          }
+        : {
+            "rating.average": -1,
+          };
+
+    const hospitals = await Hospital.find(filter).sort(sortBy);
 
     res.json(hospitals);
   } catch (error) {

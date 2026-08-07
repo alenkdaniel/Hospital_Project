@@ -110,6 +110,7 @@ const EditHospital = () => {
     website: "",
     street: "",
     city: "",
+    district: "",
     state: "",
     country: "India",
     pincode: "",
@@ -172,6 +173,7 @@ const EditHospital = () => {
       website: h.contact?.website || "",
       street: h.address?.street || "",
       city: h.address?.city || "",
+      district: h.address?.district || "",
       state: h.address?.state || "",
       country: h.address?.country || "India",
       pincode: h.address?.pincode || "",
@@ -312,6 +314,7 @@ const EditHospital = () => {
     setForm((prev) => ({
       ...prev,
       city: getContextValue(place, "place"),
+      district: getContextValue(place, "district"),
       state: getContextValue(place, "region"),
       pincode: getContextValue(place, "postcode"),
     }));
@@ -392,6 +395,7 @@ const EditHospital = () => {
 
     formData.append("address[street]", form.street);
     formData.append("address[city]", form.city);
+    formData.append("address[district]", form.district);
     formData.append("address[state]", form.state);
     formData.append("address[country]", form.country);
     formData.append("address[pincode]", form.pincode);
@@ -560,6 +564,7 @@ space-y-5
           ["website", "Website (optional)"],
           ["street", "Street"],
           ["city", "City"],
+          ["district", "District"],
           ["state", "State"],
           ["country", "Country"],
           ["pincode", "Pincode"],

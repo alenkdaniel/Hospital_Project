@@ -82,6 +82,10 @@ import Doctors from "./pages/hospital/Doctors";
 
 import AddDoctor from "./pages/hospital/AddDoctor";
 
+import EditDoctor from "./pages/hospital/EditDoctor";
+
+import ManageDoctors from "./pages/hospital/ManageDoctors";
+
 import ManageMedicines from "./pages/hospital/ManageMedicines";
 
 import ManageMedicalTests from "./pages/hospital/ManageMedicalTests";
@@ -302,6 +306,24 @@ HOSPITAL ADMIN
             element={
               <ProtectedRoute allowedRoles={["hospital_admin"]}>
                 <AddDoctor />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/hospital/doctors"
+            element={
+              <ProtectedRoute allowedRoles={["hospital_admin"]}>
+                <ManageDoctors />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/hospital/edit-doctor/:id"
+            element={
+              <ProtectedRoute allowedRoles={["hospital_admin"]}>
+                <EditDoctor />
               </ProtectedRoute>
             }
           />
