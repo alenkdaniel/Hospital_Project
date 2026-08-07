@@ -1,40 +1,36 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import {
-  Search,
-  Stethoscope,
-  CalendarCheck2,
-  ArrowRight,
-} from "lucide-react";
+import { Search, Stethoscope, CalendarCheck2, ArrowRight } from "lucide-react";
+import ScrollReveal from "../../../components/ScrollReveal";
 
+// Step 3 used to link to "/appointments", a route that doesn't
+// exist in AppRoutes.jsx. Booking always starts by picking a
+// doctor, so it now points at the real /doctors listing.
 const steps = [
   {
     id: "01",
     title: "Search Hospitals",
     description:
-      "Browse verified hospitals by location, specialty, facilities, or emergency services.",
+      "Browse verified hospitals by location, department, distance, or emergency availability.",
     icon: Search,
     link: "/hospitals",
     button: "Browse Hospitals",
   },
-
   {
     id: "02",
     title: "Choose a Doctor",
     description:
-      "Compare doctors based on specialization, experience, ratings, and availability.",
+      "Compare doctors by specialization, experience, and consultation fee.",
     icon: Stethoscope,
     link: "/doctors",
     button: "Find Doctors",
   },
-
   {
     id: "03",
     title: "Book Appointment",
     description:
-      "Select your preferred date and time to confirm your appointment in seconds.",
+      "Pick a doctor, choose an available slot, and confirm your appointment in seconds.",
     icon: CalendarCheck2,
-    link: "/appointments",
+    link: "/doctors",
     button: "Book Now",
   },
 ];
@@ -43,83 +39,53 @@ const HowItWorks = () => {
   return (
     <section className="bg-white py-24">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        {/* Heading */}
-
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          className="text-center"
-        >
-          <span className="rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-600">
+        <ScrollReveal className="text-center">
+          <span className="rounded-full bg-brand-100 px-4 py-2 text-sm font-semibold text-brand-700">
             Simple Process
           </span>
-
-          <h2 className="mt-6 text-4xl font-bold text-slate-900">
+          <h2 className="mt-6 text-4xl font-bold text-ink-900">
             How It Works
           </h2>
-
-          <p className="mx-auto mt-5 max-w-2xl text-lg text-gray-500">
+          <p className="mx-auto mt-5 max-w-2xl text-lg text-ink-500">
             Booking healthcare has never been easier. Follow three simple
             steps to connect with trusted hospitals and expert doctors.
           </p>
-        </motion.div>
+        </ScrollReveal>
 
-        {/* Steps */}
-
-        <div className="relative mt-20 grid gap-10 lg:grid-cols-3">
+        <div className="mt-20 grid gap-10 lg:grid-cols-3">
           {steps.map((step, index) => {
             const Icon = step.icon;
-
             return (
-              <motion.div
-                key={step.id}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.5,
-                  delay: index * 0.2,
-                }}
-                viewport={{ once: true }}
-                className="group relative rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
-              >
-                {/* Number */}
+              <ScrollReveal key={step.id} delay={index * 0.15}>
+                <div className="group relative h-full rounded-3xl border border-ink-100 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+                  <div className="absolute right-6 top-6 text-5xl font-extrabold text-ink-100">
+                    {step.id}
+                  </div>
 
-                <div className="absolute right-6 top-6 text-5xl font-extrabold text-slate-100">
-                  {step.id}
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100">
+                    <Icon className="text-brand-700" size={30} />
+                  </div>
+
+                  <h3 className="mt-8 text-2xl font-bold text-ink-900">
+                    {step.title}
+                  </h3>
+
+                  <p className="mt-4 leading-7 text-ink-500">
+                    {step.description}
+                  </p>
+
+                  <Link
+                    to={step.link}
+                    className="mt-8 inline-flex items-center gap-2 font-semibold text-brand-700 transition hover:text-brand-800"
+                  >
+                    {step.button}
+                    <ArrowRight
+                      size={18}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
+                  </Link>
                 </div>
-
-                {/* Icon */}
-
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-100">
-                  <Icon className="text-blue-600" size={30} />
-                </div>
-
-                {/* Content */}
-
-                <h3 className="mt-8 text-2xl font-bold text-slate-900">
-                  {step.title}
-                </h3>
-
-                <p className="mt-4 leading-8 text-gray-500">
-                  {step.description}
-                </p>
-
-                {/* Button */}
-
-                <Link
-                  to={step.link}
-                  className="mt-8 inline-flex items-center gap-2 font-semibold text-blue-600 transition hover:text-blue-700"
-                >
-                  {step.button}
-
-                  <ArrowRight
-                    size={18}
-                    className="transition-transform group-hover:translate-x-1"
-                  />
-                </Link>
-              </motion.div>
+              </ScrollReveal>
             );
           })}
         </div>

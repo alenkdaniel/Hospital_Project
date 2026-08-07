@@ -1,113 +1,116 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShieldCheck, ArrowRight, BadgeCheck } from "lucide-react";
+import { ShieldCheck, ArrowRight, BadgeCheck, Sparkles } from "lucide-react";
 
 const Hero = () => {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-blue-200">
-      {/* Background Blur */}
-      <div className="absolute -top-20 -left-20 h-72 w-72 rounded-full bg-blue-300/30 blur-3xl"></div>
+    <section className="relative overflow-hidden bg-white">
+      {/* Ambient background blobs */}
+      <div className="pointer-events-none absolute -top-40 -left-32 h-96 w-96 rounded-full bg-brand-200/40 blur-3xl" />
+      <div className="pointer-events-none absolute top-40 right-0 h-80 w-80 rounded-full bg-brand-100 blur-3xl" />
 
-      <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-blue-400/20 blur-3xl"></div>
+      <div className="relative mx-auto max-w-7xl px-6 pb-20 pt-14 lg:grid lg:grid-cols-2 lg:items-center lg:gap-14 lg:px-8 lg:pb-28 lg:pt-20">
+        {/* Left column */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.21, 0.47, 0.32, 0.98] }}
+        >
+          <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700">
+            <Sparkles size={16} />
+            24/7 Emergency Care Available
+          </div>
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-20 lg:py-28">
-        <div className="grid lg:grid-cols-2 gap-14 items-center">
-          {/* Left */}
-          <motion.div
-            initial={{ opacity: 0, x: -40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7 }}
-          >
-            {/* Badge */}
+          <h1 className="mt-7 text-5xl font-extrabold leading-[1.08] text-ink-900 sm:text-6xl">
+            World-Class Care,
+            <br />
+            <span className="text-brand-600">Seconds Away.</span>
+          </h1>
 
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-100 px-5 py-2 text-sm font-semibold text-blue-700">
-              <ShieldCheck size={18} />
-              Trusted Healthcare Platform
-            </div>
+          <p className="mt-6 max-w-xl text-lg leading-8 text-ink-500">
+            Search verified hospitals, compare expert doctors and manage
+            every step of your healthcare journey from one trusted
+            platform.
+          </p>
 
-            {/* Heading */}
-
-            <h1 className="mt-8 text-5xl md:text-6xl font-extrabold leading-tight text-slate-900">
-              Find The{" "}
-              <span className="text-blue-600">
-                Best Hospitals
-              </span>
-              <br />
-              Near You
-            </h1>
-
-            {/* Description */}
-
-            <p className="mt-8 max-w-xl text-lg leading-8 text-gray-600">
-              Search hospitals, discover expert doctors and manage your
-              healthcare journey easily from one professional platform.
-            </p>
-
-            {/* Buttons */}
-
-            <div className="mt-10 flex flex-wrap gap-5">
-              <Link
-                to="/hospitals"
-                className="flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-4 font-semibold text-white transition hover:bg-blue-700"
-              >
-                Find Hospital
-
-                <ArrowRight size={20} />
-              </Link>
-
-              <Link
-                to="/about"
-                className="rounded-xl border bg-white px-8 py-4 font-semibold text-slate-800 shadow-sm transition hover:shadow-lg"
-              >
-                Learn More
-              </Link>
-            </div>
-          </motion.div>
-
-          {/* Right */}
-
-          <motion.div
-            initial={{ opacity: 0, x: 60 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-            className="relative"
-          >
-            {/* Image */}
-
-            <div className="overflow-hidden rounded-[35px] border-8 border-white shadow-2xl">
-              <img
-                src="https://images.unsplash.com/photo-1550831107-1553da8c8464?q=80&w=1600"
-                alt="Hospital"
-                className="h-[600px] w-full object-cover"
-              />
-            </div>
-
-            {/* Floating Card */}
-
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-              }}
-              className="absolute bottom-10 -left-8 flex items-center gap-4 rounded-2xl bg-white px-6 py-5 shadow-2xl"
+          <div className="mt-9 flex flex-wrap gap-4">
+            <Link
+              to="/doctors"
+              className="inline-flex items-center gap-2 rounded-2xl bg-brand-800 px-7 py-4 font-semibold text-white shadow-lg shadow-brand-800/20 transition hover:-translate-y-0.5 hover:bg-brand-900"
             >
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white">
-                <BadgeCheck />
+              Book Appointment
+              <ArrowRight size={18} />
+            </Link>
+
+            
+              <a href="#services"
+              className="inline-flex items-center gap-2 rounded-2xl border border-ink-200 bg-white px-7 py-4 font-semibold text-ink-800 transition hover:-translate-y-0.5 hover:border-brand-300 hover:text-brand-700"
+            >
+              Our Services
+            </a>
+          </div>
+
+          {/* Stats row */}
+          <div className="mt-12 flex flex-wrap items-center gap-x-10 gap-y-6 border-t border-ink-100 pt-8">
+            <div>
+              <p className="text-3xl font-extrabold text-ink-900">500+</p>
+              <p className="mt-1 text-sm font-medium uppercase tracking-wide text-ink-400">
+                Specialists
+              </p>
+            </div>
+
+            <div>
+              <p className="text-3xl font-extrabold text-ink-900">98%</p>
+              <p className="mt-1 text-sm font-medium uppercase tracking-wide text-ink-400">
+                Patient Satisfaction
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 rounded-2xl bg-ink-50 px-4 py-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700">
+                <ShieldCheck size={20} />
               </div>
-
               <div>
-                <h3 className="font-bold text-slate-800">
-                  Verified Excellence
-                </h3>
-
-                <p className="text-gray-500">
-                  99.9% Patient Satisfaction
+                <p className="text-sm font-bold text-ink-900">
+                  Verified Experts
+                </p>
+                <p className="text-xs text-ink-500">
+                  Board-certified doctors
                 </p>
               </div>
-            </motion.div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Right column */}
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 0.1 }}
+          className="relative mt-16 lg:mt-0"
+        >
+          <div className="overflow-hidden rounded-[36px] border-8 border-white shadow-2xl shadow-ink-900/10">
+            <img
+              src="https://images.unsplash.com/photo-1550831107-1553da8c8464?q=80&w=1600&auto=format&fit=crop"
+              alt="Doctors reviewing patient care in a modern hospital"
+              className="h-[520px] w-full object-cover"
+            />
+          </div>
+
+          <motion.div
+            animate={{ y: [0, -8, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -bottom-6 -left-6 flex items-center gap-4 rounded-2xl bg-white px-6 py-5 shadow-2xl sm:-left-10"
+          >
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white">
+              <BadgeCheck />
+            </div>
+            <div>
+              <h3 className="font-bold text-ink-900">Verified Excellence</h3>
+              <p className="text-sm text-ink-500">99.9% Uptime Care Network</p>
+            </div>
           </motion.div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

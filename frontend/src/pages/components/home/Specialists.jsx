@@ -1,131 +1,91 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { useDispatch, useSelector } from "react-redux";
+import { CalendarCheck2 } from "lucide-react";
 
-const specialists = [
-  {
-    id: 1,
-    name: "Dr. James Wilson",
-    specialty: "Cardiologist",
-    experience: "Heart and cardiovascular treatments with 15+ years of experience.",
-    image:
-      "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=1200&auto=format&fit=crop",
-  },
+import { getDoctors } from "../../../features/doctor/doctorSlice";
+import ScrollReveal from "../../../components/ScrollReveal";
 
-  {
-    id: 2,
-    name: "Dr. Sarah Chen",
-    specialty: "Neurologist",
-    experience:
-      "Specialized brain and nervous system care for neurological conditions.",
-    image:
-      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=1200&auto=format&fit=crop",
-  },
-
-  {
-    id: 3,
-    name: "Dr. Robert Fox",
-    specialty: "Pediatrician",
-    experience:
-      "Comprehensive healthcare for children and adolescents.",
-    image:
-      "https://images.unsplash.com/photo-1537368910025-700350fe46c7?q=80&w=1200&auto=format&fit=crop",
-  },
-
-  {
-    id: 4,
-    name: "Dr. Emily Blunt",
-    specialty: "Dentist",
-    experience:
-      "Expert dental and oral treatments using modern painless technology.",
-    image:
-      "https://images.unsplash.com/photo-1594824476967-48c8b964273f?q=80&w=1200&auto=format&fit=crop",
-  },
-];
+const FALLBACK_IMAGE =
+  "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg";
 
 const Specialists = () => {
+  const dispatch = useDispatch();
+  const { doctors } = useSelector((state) => state.doctor);
+
+  useEffect(() => {
+    dispatch(getDoctors());
+  }, [dispatch]);
+
+  // Highlight the four most experienced doctors on the network —
+  // real records from the /doctors API, not placeholder profiles.
+  const featured = [...doctors]
+    .sort((a, b) => (b.experience || 0) - (a.experience || 0))
+    .slice(0, 4);
+
+  if (!doctors.length) return null;
+
   return (
     <section className="bg-white py-24">
       <div className="mx-auto max-w-7xl px-6">
-        {/* Heading */}
-
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          className="text-center"
-        >
-          <h2 className="text-4xl font-bold text-slate-900">
+        <ScrollReveal className="text-center">
+          <span className="inline-flex rounded-full bg-brand-100 px-4 py-2 text-sm font-semibold text-brand-700">
+            Our Network
+          </span>
+          <h2 className="mt-6 text-4xl font-bold text-ink-900">
             Medical Specialists
           </h2>
-
-          <p className="mx-auto mt-5 max-w-3xl text-lg text-gray-500">
-            Our team of world-class specialists is dedicated to your health
+          <p className="mx-auto mt-5 max-w-3xl text-lg text-ink-500">
+            Our team of verified specialists is dedicated to your health
             across every medical discipline.
           </p>
-        </motion.div>
-
-        {/* Cards */}
+        </ScrollReveal>
 
         <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {specialists.map((doctor, index) => (
-            <motion.div
-              key={doctor.id}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.5,
-                delay: index * 0.15,
-              }}
-              viewport={{ once: true }}
-              className="group overflow-hidden rounded-3xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
-            >
-              {/* Image */}
+          {featured.map((doctor, index) => (
+            <ScrollReveal key={doctor._id} delay={index * 0.1}>
+              <div className="group h-full overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-ink-100 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
+                <div className="overflow-hidden">
+                  <img
+                    src={doctor.image || FALLBACK_IMAGE}
+                    alt={doctor.name}
+                    className="h-64 w-full object-cover transition duration-500 group-hover:scale-110"
+                  />
+                </div>
 
-              <div className="overflow-hidden">
-                <img
-                  src={doctor.image}
-                  alt={doctor.name}
-                  className="h-72 w-full object-cover transition duration-500 group-hover:scale-110"
-                />
+                <div className="p-6">
+                  <h3 className="text-xl font-bold text-ink-900">
+                    Dr. {doctor.name}
+                  </h3>
+                  <p className="mt-1 font-semibold text-brand-700">
+                    {doctor.specialization}
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-ink-500">
+                    {doctor.experience}+ years experience
+                    {doctor.hospital?.name ? ` · ${doctor.hospital.name}` : ""}
+                  </p>
+
+                  <Link
+                    to={`/book-appointment/${doctor._id}`}
+                    className="mt-5 inline-flex items-center gap-2 font-semibold text-brand-700 transition hover:text-brand-800"
+                  >
+                    <CalendarCheck2 size={18} />
+                    Book Appointment
+                  </Link>
+                </div>
               </div>
-
-              {/* Content */}
-
-              <div className="p-6">
-                <h3 className="text-2xl font-bold text-slate-900">
-                  {doctor.name}
-                </h3>
-
-                <p className="mt-2 font-semibold text-blue-600">
-                  {doctor.specialty}
-                </p>
-
-                <p className="mt-4 text-gray-500 leading-7">
-                  {doctor.experience}
-                </p>
-
-                <Link
-                  to={`/doctors?specialty=${doctor.specialty}`}
-                  className="mt-6 inline-flex items-center font-semibold text-blue-600 transition hover:text-blue-700"
-                >
-                  View Specialist →
-                </Link>
-              </div>
-            </motion.div>
+            </ScrollReveal>
           ))}
         </div>
 
-        {/* Button */}
-
-        <div className="mt-16 text-center">
+        <ScrollReveal className="mt-16 text-center" delay={0.2}>
           <Link
             to="/doctors"
-            className="inline-flex items-center rounded-xl bg-blue-600 px-8 py-4 font-semibold text-white transition hover:bg-blue-700"
+            className="inline-flex items-center rounded-xl bg-brand-800 px-8 py-4 font-semibold text-white transition hover:bg-brand-900"
           >
             View All Doctors
           </Link>
-        </div>
+        </ScrollReveal>
       </div>
     </section>
   );

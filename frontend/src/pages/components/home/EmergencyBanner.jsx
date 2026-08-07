@@ -1,121 +1,68 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import {
-  PhoneCall,
-  Ambulance,
-  Clock3,
-  ShieldCheck,
-  ArrowRight,
-} from "lucide-react";
+import { PhoneCall, Ambulance, Clock3, ShieldCheck, ArrowRight } from "lucide-react";
+import ScrollReveal from "../../../components/ScrollReveal";
 
 const EmergencyBanner = () => {
   return (
-    <section className="py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 60 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          viewport={{ once: true }}
-          className="relative overflow-hidden rounded-[40px] bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-500 p-10 lg:p-16 text-white"
-        >
-          {/* Background Blur */}
+    <section className="bg-white py-24">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <ScrollReveal>
+          <div className="relative overflow-hidden rounded-[40px] bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 p-10 text-white lg:p-16">
+            <div className="pointer-events-none absolute -top-24 -left-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-brand-300/20 blur-3xl" />
 
-          <div className="absolute -top-24 -left-20 h-72 w-72 rounded-full bg-white/10 blur-3xl"></div>
+            <div className="relative grid items-center gap-12 lg:grid-cols-2">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur">
+                  <Ambulance size={18} />
+                  24/7 Emergency Support
+                </div>
 
-          <div className="absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl"></div>
+                <h2 className="mt-6 text-4xl font-bold leading-tight md:text-5xl">
+                  Need Immediate Assistance?
+                </h2>
 
-          <div className="relative grid items-center gap-12 lg:grid-cols-2">
-            {/* Left */}
-
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur">
-                <Ambulance size={18} />
-                24/7 Emergency Support
-              </div>
-
-              <h2 className="mt-6 text-4xl md:text-5xl font-bold leading-tight">
-                Need Emergency Medical Help?
-              </h2>
-
-              <p className="mt-6 max-w-xl text-lg text-blue-100">
-                Find the nearest emergency hospitals, connect with medical
-                professionals instantly, and receive quick healthcare
-                assistance whenever you need it.
-              </p>
-
-              <div className="mt-10 flex flex-wrap gap-4">
-                <a
-                  href="tel:+918000000000"
-                  className="inline-flex items-center gap-2 rounded-xl bg-white px-7 py-4 font-semibold text-blue-700 transition hover:bg-blue-50"
-                >
-                  <PhoneCall size={20} />
-                  Call Emergency
-                </a>
-
-                <Link
-                  to="/hospitals?emergency=true"
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/40 px-7 py-4 font-semibold transition hover:bg-white/10"
-                >
-                  Find Hospitals
-                  <ArrowRight size={18} />
-                </Link>
-              </div>
-            </div>
-
-            {/* Right */}
-
-            <div className="grid grid-cols-2 gap-5">
-              <div className="rounded-3xl bg-white/10 p-6 backdrop-blur">
-                <Clock3 className="text-white" size={34} />
-
-                <h3 className="mt-5 text-3xl font-bold">
-                  24/7
-                </h3>
-
-                <p className="mt-2 text-blue-100">
-                  Emergency Support
+                <p className="mt-6 max-w-xl text-lg text-brand-50">
+                  Find the nearest emergency-ready hospitals and reach
+                  medical help instantly, wherever you are.
                 </p>
+
+                <div className="mt-10 flex flex-wrap gap-4">
+                  
+                    <a href="tel:+918000000000"
+                    className="inline-flex items-center gap-2 rounded-xl bg-white px-7 py-4 font-semibold text-brand-800 transition hover:bg-brand-50"
+                  >
+                    <PhoneCall size={20} />
+                    Call Emergency
+                  </a>
+
+                  <Link
+                    to="/hospitals?emergency=true"
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/40 px-7 py-4 font-semibold transition hover:bg-white/10"
+                  >
+                    Find Hospitals
+                    <ArrowRight size={18} />
+                  </Link>
+                </div>
               </div>
 
-              <div className="rounded-3xl bg-white/10 p-6 backdrop-blur">
-                <ShieldCheck className="text-white" size={34} />
-
-                <h3 className="mt-5 text-3xl font-bold">
-                  Verified
-                </h3>
-
-                <p className="mt-2 text-blue-100">
-                  Hospitals
-                </p>
-              </div>
-
-              <div className="rounded-3xl bg-white/10 p-6 backdrop-blur">
-                <Ambulance className="text-white" size={34} />
-
-                <h3 className="mt-5 text-3xl font-bold">
-                  Fast
-                </h3>
-
-                <p className="mt-2 text-blue-100">
-                  Ambulance Access
-                </p>
-              </div>
-
-              <div className="rounded-3xl bg-white/10 p-6 backdrop-blur">
-                <PhoneCall className="text-white" size={34} />
-
-                <h3 className="mt-5 text-3xl font-bold">
-                  Instant
-                </h3>
-
-                <p className="mt-2 text-blue-100">
-                  Medical Assistance
-                </p>
+              <div className="grid grid-cols-2 gap-5">
+                {[
+                  { icon: Clock3, title: "24/7", label: "Emergency Support" },
+                  { icon: ShieldCheck, title: "Verified", label: "Hospitals" },
+                  { icon: Ambulance, title: "Fast", label: "Ambulance Access" },
+                  { icon: PhoneCall, title: "Instant", label: "Medical Assistance" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-3xl bg-white/10 p-6 backdrop-blur">
+                    <item.icon className="text-white" size={32} />
+                    <h3 className="mt-5 text-3xl font-bold">{item.title}</h3>
+                    <p className="mt-2 text-brand-50">{item.label}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-        </motion.div>
+        </ScrollReveal>
       </div>
     </section>
   );
