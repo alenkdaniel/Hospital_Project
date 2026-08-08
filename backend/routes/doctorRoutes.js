@@ -9,6 +9,8 @@ import {
   updateDoctor,
   deleteDoctor,
   getTodayAppointments,
+  getMyProfile,
+  updateMySchedule,
 } from "../controllers/doctorController.js";
 
 import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
@@ -79,6 +81,31 @@ router.get(
   protect,
   authorizeRoles("doctor"),
   getTodayAppointments
+);
+
+// =================================
+// DOCTOR SELF-SERVICE
+// VIEW / EDIT OWN WORKING DAYS
+// =================================
+
+router.get(
+  "/me/profile",
+
+  protect,
+
+  authorizeRoles("doctor"),
+
+  getMyProfile,
+);
+
+router.put(
+  "/me/schedule",
+
+  protect,
+
+  authorizeRoles("doctor"),
+
+  updateMySchedule,
 );
 
 // =================================

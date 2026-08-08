@@ -113,6 +113,32 @@ const deleteDoctor = async (id) => {
 };
 
 // =====================================
+// GET MY PROFILE
+//
+// Doctor (self)
+// =====================================
+
+const getMyProfile = async () => {
+  const response = await API.get("/doctors/me/profile");
+
+  return response.data;
+};
+
+// =====================================
+// UPDATE MY WORKING DAYS
+//
+// Doctor (self)
+// =====================================
+
+const updateMySchedule = async (weeklySchedule) => {
+  const response = await API.put("/doctors/me/schedule", {
+    weeklySchedule,
+  });
+
+  return response.data;
+};
+
+// =====================================
 // EXPORT SERVICE
 // =====================================
 
@@ -130,6 +156,10 @@ const doctorService = {
   updateDoctor,
 
   deleteDoctor,
+
+  getMyProfile,
+
+  updateMySchedule,
 };
 
 export default doctorService;

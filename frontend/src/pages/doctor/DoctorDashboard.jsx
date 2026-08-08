@@ -8,16 +8,23 @@ import {
   resetAppointment,
 } from "../../features/appointment/appointmentSlice";
 
+import { getMyProfile } from "../../features/doctor/doctorSlice";
+
 import { motion } from "framer-motion";
 
 import toast from "react-hot-toast";
 
 import ConsultationModal from "../../components/doctor/ConsultationModal";
+import WorkingDaysEditor from "../../components/doctor/WorkingDaysEditor";
 
 const DoctorDashboard = () => {
   const dispatch = useDispatch();
 
   const { user } = useSelector((state) => state.auth);
+
+  const { myProfile, isLoading: profileLoading } = useSelector(
+    (state) => state.doctor,
+  );
 
   // =====================================
   // CONSULTATION MODAL
@@ -41,6 +48,7 @@ const DoctorDashboard = () => {
 
 useEffect(() => {
   dispatch(getDoctorAppointments());
+  dispatch(getMyProfile());
 
   return () => {
     dispatch(resetAppointment());
@@ -197,6 +205,10 @@ font-bold
           </div>
         ))}
       </div>
+
+      {/* MY WORKING DAYS */}
+
+      <WorkingDaysEditor profile={myProfile} isLoading={profileLoading} />
 
       {/* LOADING */}
 

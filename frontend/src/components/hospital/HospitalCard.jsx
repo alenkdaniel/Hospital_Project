@@ -104,12 +104,14 @@ const HospitalCard = ({ hospital, distance, duration }) => {
               )}
             </div>
 
-            {/* Actions — both go to the hospital's own detail page,
-                which is where its real doctor list and working
-                per-doctor "Book Appointment" links live. */}
+            {/* "View Doctors & Book" jumps straight to the Doctors
+                tab on the hospital's page; "Details" opens on the
+                Overview tab. Both land on the same page, just a
+                different starting tab. */}
             <div className="flex flex-1 justify-end gap-3">
               <Link
                 to={`/hospitals/${hospital._id}`}
+                state={{ tab: "doctors" }}
                 className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-brand-800 px-6 font-semibold text-white transition hover:bg-brand-900"
               >
                 View Doctors & Book
@@ -117,6 +119,7 @@ const HospitalCard = ({ hospital, distance, duration }) => {
               </Link>
               <Link
                 to={`/hospitals/${hospital._id}`}
+                state={{ tab: "overview" }}
                 className="flex h-12 items-center justify-center rounded-2xl border-2 border-brand-700 bg-white px-6 font-semibold text-brand-700 transition hover:bg-brand-50"
               >
                 Details

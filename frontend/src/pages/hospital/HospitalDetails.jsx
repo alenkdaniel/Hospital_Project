@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -30,13 +30,24 @@ import {
 const HospitalDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
 
   const { hospital, isLoading } = useSelector((state) => state.hospital);
   const { doctors } = useSelector((state) => state.doctor);
   const { hospitalReviews } = useSelector((state) => state.review);
 
-  const [activeTab, setActiveTab] = useState("overview");
+  // "View Doctors & Book" on the hospitals list links here with
+  // state: { tab: "doctors" } so it opens straight on that tab
+  // instead of always landing on Overview.
+  const [activeTab, setActiveTab] = useState(location.state?.tab || "overview");
+
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location.state]);
+
   const [isFavorite, setIsFavorite] = useState(false);
   const [displayedDoctors, setDisplayedDoctors] = useState(3);
 

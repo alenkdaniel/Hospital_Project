@@ -13,6 +13,8 @@ const initialState = {
 
   myDoctors: [],
 
+  myProfile: null,
+
   isLoading: false,
 
   isSuccess: false,
@@ -20,6 +22,8 @@ const initialState = {
   isError: false,
 
   message: "",
+
+  scheduleSaving: false,
 };
 
 // =====================================
@@ -149,6 +153,40 @@ export const deleteDoctor = createAsyncThunk(
       await doctorService.deleteDoctor(id);
 
       return id;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+// =====================================
+// GET MY PROFILE
+// Doctor (self)
+// =====================================
+
+export const getMyProfile = createAsyncThunk(
+  "doctor/getMyProfile",
+
+  async (_, thunkAPI) => {
+    try {
+      return await doctorService.getMyProfile();
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+// =====================================
+// UPDATE MY WORKING DAYS
+// Doctor (self)
+// =====================================
+
+export const updateMySchedule = createAsyncThunk(
+  "doctor/updateMySchedule",
+
+  async (weeklySchedule, thunkAPI) => {
+    try {
+      return await doctorService.updateMySchedule(weeklySchedule);
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error));
     }
@@ -290,6 +328,76 @@ const doctorSlice = createSlice({
           state.myDoctors = state.myDoctors.filter(
             (doc) => doc._id !== action.payload,
           );
+        },
+      )
+
+      // =========================
+      // MY PROFILE (doctor self)
+      // =========================
+
+      .addCase(
+        getMyProfile.pending,
+
+        (state) => {
+          state.isLoading = true;
+        },
+      )
+
+      .addCase(
+        getMyProfile.fulfilled,
+
+        (state, action) => {
+          state.isLoading = false;
+
+          state.myProfile = action.payload;
+        },
+      )
+
+      .addCase(
+        getMyProfile.rejected,
+
+        (state, action) => {
+          state.isLoading = false;
+
+          state.isError = true;
+
+          state.message = action.payload;
+        },
+      )
+
+      // =========================
+      // UPDATE MY SCHEDULE (doctor self)
+      // =========================
+
+      .addCase(
+        updateMySchedule.pending,
+
+        (state) => {
+          state.scheduleSaving = true;
+        },
+      )
+
+      .addCase(
+        updateMySchedule.fulfilled,
+
+        (state, action) => {
+          state.scheduleSaving = false;
+
+          state.myProfile = action.payload;
+
+          state.isSuccess = true;
+        },
+      )
+
+      .addCase(
+        updateMySchedule.rejected,
+
+        (state, action) => {
+          state.scheduleSaving = false;
+
+          state.isError = true;
+
+          state.message = action.payload;
         },
       );
   },

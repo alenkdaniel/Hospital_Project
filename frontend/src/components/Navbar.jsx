@@ -6,12 +6,18 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { logout } from "../redux/slices/authSlice";
 
+import { motion, AnimatePresence } from "framer-motion";
+
 import {
   Menu,
   X,
   User,
   LogOut,
   ChevronDown,
+  HeartPulse,
+  LayoutDashboard,
+  CalendarCheck,
+  Building2,
 } from "lucide-react";
 
 import NotificationBell from "./NotificationBell";
@@ -26,6 +32,8 @@ const Navbar = () => {
   const [manageOpen, setManageOpen] = useState(false);
 
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const [scrolled, setScrolled] = useState(false);
 
   const profileRef = useRef(null);
 
@@ -48,6 +56,18 @@ const Navbar = () => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
+  }, []);
+
+  // Give the navbar a "docked" look with a border/shadow once
+  // the page has scrolled, and a lighter look at the very top.
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 8);
+
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const handleLogout = () => {
@@ -109,47 +129,35 @@ const Navbar = () => {
   ];
 
   const linkStyle = ({ isActive }) =>
-    `relative pb-2 text-[16px] font-medium transition-all duration-300
+    `relative pb-2 text-[15px] font-semibold transition-colors duration-200
     ${isActive
-      ? "text-blue-600 after:absolute after:left-0 after:-bottom-2 after:h-0.5 after:w-full after:bg-blue-600"
-      : "text-gray-600 hover:text-blue-600"
+      ? "text-brand-700 after:absolute after:left-0 after:-bottom-2 after:h-0.5 after:w-full after:rounded-full after:bg-brand-600"
+      : "text-ink-600 hover:text-brand-700"
     }`;
 
   return (
-    <nav className="fixed top-0 left-0 z-50 w-full border-b border-gray-200 bg-white">
+    <nav
+      className={`fixed left-0 top-0 z-50 w-full transition-all duration-300 ${
+        scrolled
+          ? "border-b border-ink-100 bg-white/90 shadow-sm backdrop-blur-lg"
+          : "border-b border-transparent bg-white/70 backdrop-blur-md"
+      }`}
+    >
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8">
 
         {/* LOGO */}
 
-        <Link
-          to="/"
-          className="flex items-center gap-3"
-        >
-          <div
-            className="
-            flex
-            h-11
-            w-11
-            items-center
-            justify-center
-            rounded-xl
-            bg-gradient-to-r
-            from-blue-600
-            to-cyan-500
-            text-xl
-            font-bold
-            text-white
-            "
-          >
-            M
+        <Link to="/" className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-700 to-brand-500 text-white shadow-md shadow-brand-700/20">
+            <HeartPulse size={22} />
           </div>
 
           <div>
-            <h1 className="text-3xl font-bold text-blue-600">
-              MediCare
+            <h1 className="font-display text-2xl font-extrabold leading-none text-ink-900">
+              Medi<span className="text-brand-700">Care+</span>
             </h1>
 
-            <p className="text-xs text-gray-500">
+            <p className="mt-0.5 text-xs text-ink-400">
               Healthcare Platform
             </p>
           </div>
@@ -157,7 +165,7 @@ const Navbar = () => {
 
         {/* DESKTOP NAVIGATION */}
 
-        <div className="hidden lg:flex items-center gap-10">
+        <div className="hidden lg:flex items-center gap-9">
 
           {navLinks.map((item) => (
             <NavLink
@@ -192,46 +200,44 @@ const Navbar = () => {
               <button
                 type="button"
                 onClick={() => setManageOpen(!manageOpen)}
-                className="flex items-center gap-1 text-[16px] font-medium text-gray-600 transition-colors hover:text-blue-600"
+                className={`flex items-center gap-1 text-[15px] font-semibold transition-colors ${
+                  manageOpen ? "text-brand-700" : "text-ink-600 hover:text-brand-700"
+                }`}
               >
                 Manage Hospital
                 <ChevronDown
                   size={16}
-                  className={`transition-transform ${manageOpen ? "rotate-180" : ""}`}
+                  className={`transition-transform duration-200 ${manageOpen ? "rotate-180" : ""}`}
                 />
               </button>
 
-              {manageOpen && (
-                <div
-                  className="
-                  absolute
-                  left-0
-                  top-10
-                  w-56
-                  rounded-2xl
-                  border
-                  bg-white
-                  p-2
-                  shadow-xl
-                  "
-                >
-                  {hospitalAdminLinks.map((item) => (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setManageOpen(false)}
-                      className={({ isActive }) =>
-                        `block rounded-xl px-4 py-3 text-sm transition ${isActive
-                          ? "bg-blue-50 font-semibold text-blue-600"
-                          : "text-gray-700 hover:bg-gray-100"
-                        }`
-                      }
-                    >
-                      {item.name}
-                    </NavLink>
-                  ))}
-                </div>
-              )}
+              <AnimatePresence>
+                {manageOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute left-0 top-11 w-60 overflow-hidden rounded-2xl border border-ink-100 bg-white p-2 shadow-xl"
+                  >
+                    {hospitalAdminLinks.map((item) => (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setManageOpen(false)}
+                        className={({ isActive }) =>
+                          `block rounded-xl px-4 py-3 text-sm font-medium transition ${isActive
+                            ? "bg-brand-50 text-brand-700"
+                            : "text-ink-600 hover:bg-ink-50"
+                          }`
+                        }
+                      >
+                        {item.name}
+                      </NavLink>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
@@ -264,36 +270,10 @@ const Navbar = () => {
             <div className="relative" ref={profileRef}>
 
               <button
-                onClick={() =>
-                  setProfileOpen(!profileOpen)
-                }
-                className="
-                flex
-                items-center
-                gap-2
-                rounded-full
-                border
-                border-gray-200
-                bg-white
-                px-2
-                py-2
-                shadow-sm
-                "
+                onClick={() => setProfileOpen(!profileOpen)}
+                className="flex items-center gap-2 rounded-full border border-ink-100 bg-white py-1.5 pl-1.5 pr-3 shadow-sm transition hover:border-brand-200 hover:shadow-md"
               >
-                <div
-                  className="
-                  flex
-                  h-10
-                  w-10
-                  items-center
-                  justify-center
-                  rounded-full
-                  bg-blue-600
-                  text-white
-                  font-bold
-                  overflow-hidden
-                  "
-                >
+                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-brand-700 to-brand-500 font-bold text-white">
                   {user.profileImage?.url ? (
                     <img
                       src={user.profileImage.url}
@@ -305,75 +285,78 @@ const Navbar = () => {
                   )}
                 </div>
 
-                <ChevronDown size={18} />
+                <ChevronDown
+                  size={16}
+                  className={`text-ink-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`}
+                />
               </button>
 
-              {profileOpen && (
-                <div
-                  className="
-                  absolute
-                  right-0
-                  top-14
-                  w-72
-                  rounded-2xl
-                  border
-                  bg-white
-                  p-5
-                  shadow-xl
-                  "
-                >
-                  <h3 className="font-semibold">
-                    {user.name}
-                  </h3>
-
-                  <p className="mt-1 text-sm capitalize text-gray-500">
-                    {user.role.replace("_", " ")}
-                  </p>
-
-                  <hr className="my-4" />
-
-                  <Link
-                    to="/profile"
-                    onClick={() =>
-                      setProfileOpen(false)
-                    }
-                    className="flex items-center gap-2 py-2 hover:text-blue-600"
+              <AnimatePresence>
+                {profileOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-14 w-72 overflow-hidden rounded-2xl border border-ink-100 bg-white p-5 shadow-xl"
                   >
-                    <User size={18} />
-                    Profile
-                  </Link>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-brand-700 to-brand-500 font-bold text-white">
+                        {user.profileImage?.url ? (
+                          <img
+                            src={user.profileImage.url}
+                            alt="profile"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          user.name?.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="truncate font-semibold text-ink-900">
+                          {user.name}
+                        </h3>
 
-                  <button
-                    onClick={handleLogout}
-                    className="mt-2 flex items-center gap-2 py-2 text-red-600"
-                  >
-                    <LogOut size={18} />
-                    Logout
-                  </button>
-                </div>
-              )}
+                        <p className="mt-0.5 inline-block rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold capitalize text-brand-700">
+                          {user.role.replace("_", " ")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <hr className="my-4 border-ink-100" />
+
+                    <Link
+                      to="/profile"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-2 rounded-xl px-2 py-2.5 font-medium text-ink-600 transition hover:bg-ink-50 hover:text-brand-700"
+                    >
+                      <User size={18} />
+                      Profile
+                    </Link>
+
+                    <button
+                      onClick={handleLogout}
+                      className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-2.5 text-left font-medium text-rose-600 transition hover:bg-rose-50"
+                    >
+                      <LogOut size={18} />
+                      Logout
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ) : (
             <>
               <Link
                 to="/login"
-                className="font-medium text-gray-700 hover:text-blue-600"
+                className="text-[15px] font-semibold text-ink-600 hover:text-brand-700"
               >
                 Login
               </Link>
 
               <Link
                 to="/register"
-                className="
-                rounded-xl
-                bg-blue-600
-                px-6
-                py-3
-                font-semibold
-                text-white
-                transition
-                hover:bg-blue-700
-                "
+                className="rounded-2xl bg-brand-700 px-6 py-3 text-[15px] font-semibold text-white shadow-md shadow-brand-700/20 transition hover:bg-brand-800"
               >
                 Register
               </Link>
@@ -388,148 +371,185 @@ const Navbar = () => {
           {user && <NotificationBell />}
 
           <button
-            onClick={() =>
-              setMobileOpen(!mobileOpen)
-            }
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-ink-100 bg-white text-ink-700 shadow-sm"
           >
-            {mobileOpen ? <X /> : <Menu />}
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
       </div>
       {/* MOBILE MENU */}
 
-      {mobileOpen && (
-        <div className="absolute left-0 top-20 w-full border-t bg-white shadow-xl lg:hidden">
-          <div className="flex flex-col p-6">
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute left-0 top-20 w-full overflow-hidden border-t border-ink-100 bg-white shadow-xl lg:hidden"
+          >
+            <div className="flex flex-col p-6">
 
-            {navLinks.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  `rounded-lg px-4 py-3 transition ${isActive
-                    ? "bg-blue-50 font-semibold text-blue-600"
-                    : "text-gray-700 hover:bg-gray-100"
-                  }`
-                }
-              >
-                {item.name}
-              </NavLink>
-            ))}
-
-            {/* Patient */}
-
-            {user?.role === "patient" && (
-              <>
+              {navLinks.map((item) => (
                 <NavLink
-                  to="/dashboard"
+                  key={item.path}
+                  to={item.path}
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-lg px-4 py-3 hover:bg-gray-100"
+                  className={({ isActive }) =>
+                    `rounded-xl px-4 py-3 font-medium transition ${isActive
+                      ? "bg-brand-50 font-semibold text-brand-700"
+                      : "text-ink-600 hover:bg-ink-50"
+                    }`
+                  }
                 >
-                  Dashboard
+                  {item.name}
                 </NavLink>
+              ))}
 
-                <NavLink
-                  to="/my"
-                  onClick={() => setMobileOpen(false)}
-                  className="rounded-lg px-4 py-3 hover:bg-gray-100"
-                >
-                  My Appointments
-                </NavLink>
-              </>
-            )}
+              {/* Patient */}
 
-            {/* Hospital Admin */}
-
-            {user?.role === "hospital_admin" && (
-              <>
-                <p className="mt-2 px-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Manage Hospital
-                </p>
-
-                {hospitalAdminLinks.map((item) => (
+              {user?.role === "patient" && (
+                <>
                   <NavLink
-                    key={item.path}
-                    to={item.path}
+                    to="/dashboard"
                     onClick={() => setMobileOpen(false)}
-                    className="rounded-lg px-4 py-3 hover:bg-gray-100"
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 rounded-xl px-4 py-3 font-medium transition ${isActive
+                        ? "bg-brand-50 font-semibold text-brand-700"
+                        : "text-ink-600 hover:bg-ink-50"
+                      }`
+                    }
                   >
-                    {item.name}
+                    <LayoutDashboard size={17} />
+                    Dashboard
                   </NavLink>
-                ))}
-              </>
-            )}
 
-            {/* Doctor */}
+                  <NavLink
+                    to="/my"
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 rounded-xl px-4 py-3 font-medium transition ${isActive
+                        ? "bg-brand-50 font-semibold text-brand-700"
+                        : "text-ink-600 hover:bg-ink-50"
+                      }`
+                    }
+                  >
+                    <CalendarCheck size={17} />
+                    My Appointments
+                  </NavLink>
+                </>
+              )}
 
-            {user?.role === "doctor" && (
-              <NavLink
-                to="/doctor-dashboard"
-                onClick={() => setMobileOpen(false)}
-                className="rounded-lg px-4 py-3 hover:bg-gray-100"
-              >
-                Doctor Panel
-              </NavLink>
-            )}
+              {/* Hospital Admin */}
 
-            {/* Super Admin */}
+              {user?.role === "hospital_admin" && (
+                <>
+                  <p className="mt-3 flex items-center gap-2 px-4 text-xs font-semibold uppercase tracking-wide text-ink-400">
+                    <Building2 size={14} />
+                    Manage Hospital
+                  </p>
 
-            {user?.role === "super_admin" && (
-              <NavLink
-                to="/super-admin"
-                onClick={() => setMobileOpen(false)}
-                className="rounded-lg px-4 py-3 hover:bg-gray-100"
-              >
-                Admin Panel
-              </NavLink>
-            )}
+                  {hospitalAdminLinks.map((item) => (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setMobileOpen(false)}
+                      className={({ isActive }) =>
+                        `rounded-xl px-4 py-3 font-medium transition ${isActive
+                          ? "bg-brand-50 font-semibold text-brand-700"
+                          : "text-ink-600 hover:bg-ink-50"
+                        }`
+                      }
+                    >
+                      {item.name}
+                    </NavLink>
+                  ))}
+                </>
+              )}
 
-            <hr className="my-5" />
+              {/* Doctor */}
 
-            {user ? (
-              <>
-                <Link
-                  to="/profile"
-                  onClick={() => {
-                    setProfileOpen(false);
-                    setMobileOpen(false);
-                  }}
-                  className="rounded-lg px-4 py-3 hover:bg-gray-100"
-                >
-                  Profile
-                </Link>
-
-                <button
-                  onClick={handleLogout}
-                  className="rounded-lg px-4 py-3 text-left text-red-600 hover:bg-red-50"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <div className="flex flex-col gap-3">
-                <Link
-                  to="/login"
+              {user?.role === "doctor" && (
+                <NavLink
+                  to="/doctor-dashboard"
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-xl border border-blue-600 px-5 py-3 text-center font-semibold text-blue-600"
+                  className={({ isActive }) =>
+                    `rounded-xl px-4 py-3 font-medium transition ${isActive
+                      ? "bg-brand-50 font-semibold text-brand-700"
+                      : "text-ink-600 hover:bg-ink-50"
+                    }`
+                  }
                 >
-                  Login
-                </Link>
+                  Doctor Panel
+                </NavLink>
+              )}
 
-                <Link
-                  to="/register"
+              {/* Super Admin */}
+
+              {user?.role === "super_admin" && (
+                <NavLink
+                  to="/super-admin"
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-xl bg-blue-600 px-5 py-3 text-center font-semibold text-white"
+                  className={({ isActive }) =>
+                    `rounded-xl px-4 py-3 font-medium transition ${isActive
+                      ? "bg-brand-50 font-semibold text-brand-700"
+                      : "text-ink-600 hover:bg-ink-50"
+                    }`
+                  }
                 >
-                  Register
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+                  Admin Panel
+                </NavLink>
+              )}
+
+              <hr className="my-5 border-ink-100" />
+
+              {user ? (
+                <>
+                  <Link
+                    to="/profile"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      setMobileOpen(false);
+                    }}
+                    className="flex items-center gap-2 rounded-xl px-4 py-3 font-medium text-ink-600 hover:bg-ink-50"
+                  >
+                    <User size={17} />
+                    Profile
+                  </Link>
+
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 rounded-xl px-4 py-3 text-left font-medium text-rose-600 hover:bg-rose-50"
+                  >
+                    <LogOut size={17} />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-2xl border border-brand-600 px-5 py-3 text-center font-semibold text-brand-700"
+                  >
+                    Login
+                  </Link>
+
+                  <Link
+                    to="/register"
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-2xl bg-brand-700 px-5 py-3 text-center font-semibold text-white shadow-md shadow-brand-700/20"
+                  >
+                    Register
+                  </Link>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 };

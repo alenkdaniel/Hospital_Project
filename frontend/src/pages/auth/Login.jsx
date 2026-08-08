@@ -8,7 +8,40 @@ import { login, reset } from "../../redux/slices/authSlice";
 
 import toast from "react-hot-toast";
 
+import { motion } from "framer-motion";
+
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  LogIn,
+  ArrowRight,
+  CalendarCheck,
+  ShieldCheck,
+  Ticket,
+  HeartPulse,
+} from "lucide-react";
+
 import GoogleLoginButton from "../../components/GoogleLoginButton";
+
+const FEATURES = [
+  {
+    icon: CalendarCheck,
+    title: "Book in seconds",
+    desc: "Find a doctor and reserve a slot without the phone queue.",
+  },
+  {
+    icon: Ticket,
+    title: "Live token tracking",
+    desc: "Know your queue position and estimated wait time in real time.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Your data, protected",
+    desc: "Medical records and payments are encrypted end to end.",
+  },
+];
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -16,6 +49,8 @@ function Login() {
 
     password: "",
   });
+
+  const [showPassword, setShowPassword] = useState(false);
 
   const dispatch = useDispatch();
 
@@ -111,238 +146,166 @@ function Login() {
   }, [user, isSuccess, isError, message, navigate, dispatch]);
 
   return (
-    <div
-      className="
-min-h-screen
-pt-20
-bg-blue-50
-flex
-items-center
-justify-center
-px-6
-"
-    >
-      <div
-        className="
-w-full
-max-w-6xl
-grid
-md:grid-cols-2
-bg-white
-rounded-3xl
-shadow-xl
-overflow-hidden
-"
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ink-50 px-6 pt-20 pb-16">
+      {/* ambient background glow */}
+      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-200/40 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-brand-100/60 blur-3xl" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="relative grid w-full max-w-6xl overflow-hidden rounded-[32px] border border-ink-100 bg-white shadow-2xl md:grid-cols-2"
       >
         {/* LEFT SIDE */}
 
-        <div
-          className="
-p-10
-bg-blue-50
-"
-        >
-          <img
-            src="https://images.unsplash.com/photo-1505751172876-fa1923c5c528?q=80&w=1200"
-            alt="healthcare"
-            className="
-w-full
-h-64
-object-cover
-rounded-2xl
-shadow-lg
-"
-          />
+        <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 p-12 text-white md:flex">
+          {/* decorative pattern */}
+          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute -bottom-24 left-0 h-72 w-72 rounded-full bg-white/5" />
 
-          <h1
-            className="
-mt-10
-text-5xl
-font-bold
-tracking-widest
-text-gray-800
-"
-          >
-            WELCOME
-            <br />
-            BACK
-          </h1>
+          <div className="relative">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
+              <HeartPulse size={24} />
+            </span>
 
-          <p
-            className="
-mt-6
-text-gray-600
-text-lg
-leading-relaxed
-"
-          >
-            Login to manage appointments, find hospitals and access healthcare
-            services securely.
-          </p>
+            <h1 className="mt-8 text-4xl font-extrabold leading-tight">
+              Welcome back to
+              <br />
+              MediCare+
+            </h1>
+
+            <p className="mt-4 max-w-sm text-brand-50/90">
+              Log in to manage your appointments, track your queue and stay
+              on top of your care.
+            </p>
+          </div>
+
+          <div className="relative mt-10 space-y-6">
+            {FEATURES.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="flex items-start gap-4">
+                <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                  <Icon size={18} />
+                </span>
+                <div>
+                  <p className="font-semibold">{title}</p>
+                  <p className="mt-0.5 text-sm text-brand-50/80">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* RIGHT SIDE */}
 
-        <div
-          className="
-flex
-items-center
-justify-center
-p-12
-"
-        >
-          <div
-            className="
-w-full
-max-w-md
-"
-          >
-            <h2
-              className="
-text-3xl
-font-bold
-text-gray-900
-"
-            >
-              Login Account
+        <div className="flex items-center justify-center p-8 sm:p-12">
+          <div className="w-full max-w-md">
+            <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 md:hidden">
+              <HeartPulse size={22} />
+            </div>
+
+            <h2 className="text-3xl font-extrabold text-ink-900">
+              Login to your account
             </h2>
 
-            <p
-              className="
-text-gray-500
-mt-2
-"
-            >
+            <p className="mt-2 text-ink-500">
               Continue your healthcare journey
             </p>
 
-            <form
-              onSubmit={handleLogin}
-              className="
-mt-8
-space-y-5
-"
-            >
-              <input
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="Email Address"
-                className="
-w-full
-bg-gray-100
-p-4
-rounded-xl
-outline-none
-"
-              />
+            <form onSubmit={handleLogin} className="mt-8 space-y-4">
+              <div className="relative">
+                <Mail
+                  size={18}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-400"
+                />
+                <input
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Email Address"
+                  required
+                  className="w-full rounded-2xl border border-transparent bg-ink-50 p-4 pl-12 text-ink-900 outline-none transition focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100"
+                />
+              </div>
 
-              <input
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Password"
-                className="
-w-full
-bg-gray-100
-p-4
-rounded-xl
-outline-none
-"
-              />
+              <div className="relative">
+                <Lock
+                  size={18}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-400"
+                />
+                <input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Password"
+                  required
+                  className="w-full rounded-2xl border border-transparent bg-ink-50 p-4 pl-12 pr-12 text-ink-900 outline-none transition focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-400 transition hover:text-ink-600"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+
+              <div className="flex justify-end">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-semibold text-brand-700 hover:text-brand-800"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
 
               <button
                 disabled={isLoading}
                 type="submit"
-                className="
-w-full
-bg-blue-600
-text-white
-py-4
-rounded-xl
-font-semibold
-hover:bg-blue-700
-transition
-"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-700 py-4 font-semibold text-white shadow-lg shadow-brand-700/20 transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isLoading ? "Logging in..." : "Login"}
+                {isLoading ? (
+                  "Logging in..."
+                ) : (
+                  <>
+                    <LogIn size={18} />
+                    Login
+                    <ArrowRight size={16} className="ml-auto" />
+                  </>
+                )}
               </button>
-              <Link
-                to="/forgot-password"
-                className="text-blue-600 hover:text-blue-700 text-sm"
-              >
-                Forgot Password?
-              </Link>
             </form>
 
             {/* DIVIDER */}
 
-            <div
-              className="
-flex
-items-center
-gap-3
-my-6
-"
-            >
-              <div
-                className="
-flex-1
-h-px
-bg-gray-300
-"
-              />
-
-              <span
-                className="
-text-gray-400
-text-sm
-"
-              >
-                OR
-              </span>
-
-              <div
-                className="
-flex-1
-h-px
-bg-gray-300
-"
-              />
+            <div className="my-6 flex items-center gap-3">
+              <div className="h-px flex-1 bg-ink-200" />
+              <span className="text-sm text-ink-400">OR</span>
+              <div className="h-px flex-1 bg-ink-200" />
             </div>
 
-            <div
-              className="
-flex
-justify-center
-"
-            >
+            <div className="flex justify-center">
               {/* <GoogleLoginButton /> */}
             </div>
 
-            <p
-              className="
-text-center
-mt-8
-text-gray-500
-"
-            >
+            <p className="mt-8 text-center text-ink-500">
               Don't have an account?
               <Link
                 to="/register"
-                className="
-text-blue-600
-ml-2
-font-semibold
-"
+                className="ml-2 font-semibold text-brand-700 hover:text-brand-800"
               >
                 Create Account
               </Link>
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -112,21 +112,6 @@ export const register = async (req, res) => {
 
     await user.save();
 
-
-    if(user.role === "patient"){
-      const confirmUser = await sendEmail({
-      to:user.email,
-      subject : `Our new user`,
-      html: emailTemplate({
-        title: "Welcome ${user.name}",
-
-        greeting: user.name,
-
-        message: "This is for our  new pateint greetings",
-      }),
-    })
-    }
-
     res.status(201).json({
       success: true,
       message: "Registration successful. Please verify your email.",
@@ -276,6 +261,40 @@ export const verifyEmail = async (req, res) => {
     user.emailVerification.expiresAt = undefined;
 
     await user.save();
+
+    // =================================
+    // WELCOME EMAIL
+    // Sent once, right after a new
+    // patient's OTP is confirmed.
+    // Best-effort — a failed welcome
+    // email should never block a
+    // successful verification.
+    // =================================
+
+    if (user.role === "patient") {
+      sendEmail({
+        to: user.email,
+
+        subject: "Welcome to Hospital Booking!",
+
+        html: emailTemplate({
+          title: `Welcome, ${user.name}!`,
+
+          greeting: user.name,
+
+          message:
+            "Your email is verified and your account is ready to go. " +
+            "You can now search hospitals, browse doctors and book " +
+            "appointments in just a few clicks.",
+
+          actionText: "Find a Doctor",
+
+          actionUrl: `${process.env.CLIENT_URL}/hospitals`,
+        }),
+      }).catch((err) => {
+        console.error("WELCOME EMAIL ERROR:", err);
+      });
+    }
 
     res.json({
       message: "Email verified successfully",

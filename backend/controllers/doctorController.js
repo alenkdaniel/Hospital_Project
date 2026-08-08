@@ -341,21 +341,71 @@ export const getMyDoctors = async (req, res) => {
 
 export const getDoctors = async (req, res) => {
   try {
-    const doctors = await Doctor.find({
-      $or: [{ isAvailable: true }, { isAvailable: { $exists: false } }],
-    })
+    const doctors = await Doctor.aggregate([
+      // Only doctors marked available (or with no isAvailable field
+      // at all, which defaults to available) — same condition as
+      // before, still evaluated by MongoDB.
+      {
+        $match: {
+          $or: [{ isAvailable: true }, { isAvailable: { $exists: false } }],
+        },
+      },
 
-      .populate(
-        "hospital",
+      // Join each doctor to their hospital document.
+      {
+        $lookup: {
+          from: "hospitals",
+          localField: "hospital",
+          foreignField: "_id",
+          as: "hospital",
+        },
+      },
 
-        "name address verification",
-      );
+      // $lookup always returns an array — a doctor has exactly
+      // one hospital, so unwind it into a single object (and drop
+      // the doctor entirely if the hospital reference is broken).
+      {
+        $unwind: "$hospital",
+      },
 
-    const approvedDoctors = doctors.filter(
-      (doc) => doc.hospital?.verification?.status === "approved",
-    );
+      // This used to be a JS .filter() run after fetching every
+      // doctor into memory — now it's evaluated by MongoDB, so
+      // only approved-hospital doctors ever leave the database.
+      {
+        $match: {
+          "hospital.verification.status": "approved",
+        },
+      },
 
-    res.json(approvedDoctors);
+      // Keep the hospital payload the same shape .populate(
+      // "hospital", "name address verification") used to return.
+      {
+        $project: {
+          "hospital.name": 1,
+          "hospital.address": 1,
+          "hospital.verification": 1,
+          name: 1,
+          gender: 1,
+          image: 1,
+          specialization: 1,
+          qualification: 1,
+          department: 1,
+          experience: 1,
+          licenseNumber: 1,
+          contact: 1,
+          consultationFee: 1,
+          weeklySchedule: 1,
+          leaves: 1,
+          about: 1,
+          rating: 1,
+          isAvailable: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      },
+    ]);
+
+    res.json(doctors);
   } catch (error) {
     res.status(500).json({
       message: error.message,
@@ -486,6 +536,154 @@ export const deleteDoctor = async (req, res) => {
     res.json({
       message: "Doctor deleted successfully",
     });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+// ===============================
+// DOCTOR SELF-SERVICE
+// GET MY PROFILE
+// ===============================
+
+export const getMyProfile = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({
+      user: req.user._id,
+    }).populate("hospital", "name address");
+
+    if (!doctor) {
+      return res.status(404).json({
+        message: "Doctor profile not found",
+      });
+    }
+
+    res.json(doctor);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+// ===============================
+// DOCTOR SELF-SERVICE
+// UPDATE MY WORKING DAYS
+// ===============================
+
+const VALID_WEEK_DAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+const isValidTime = (value) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
+
+export const updateMySchedule = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({
+      user: req.user._id,
+    });
+
+    if (!doctor) {
+      return res.status(404).json({
+        message: "Doctor profile not found",
+      });
+    }
+
+    let incoming = req.body.weeklySchedule;
+
+    if (!incoming) {
+      return res.status(400).json({
+        message: "weeklySchedule is required",
+      });
+    }
+
+    if (!Array.isArray(incoming)) {
+      incoming = Object.values(incoming);
+    }
+
+    if (incoming.length === 0) {
+      return res.status(400).json({
+        message: "Please provide at least one day",
+      });
+    }
+
+    // Keep a lookup of the doctor's current schedule so
+    // slotDuration / breaks aren't lost for days not being changed.
+    const existingByDay = {};
+
+    doctor.weeklySchedule.forEach((entry) => {
+      existingByDay[entry.day] = entry;
+    });
+
+    const seenDays = new Set();
+    const nextSchedule = [];
+
+    for (const entry of incoming) {
+      const day = entry.day;
+
+      if (!VALID_WEEK_DAYS.includes(day)) {
+        return res.status(400).json({
+          message: `Invalid day: ${day}`,
+        });
+      }
+
+      if (seenDays.has(day)) {
+        return res.status(400).json({
+          message: `Duplicate day in schedule: ${day}`,
+        });
+      }
+
+      seenDays.add(day);
+
+      const isWorking =
+        entry.isWorking === true || entry.isWorking === "true";
+
+      const startTime =
+        entry.startTime || existingByDay[day]?.startTime || "09:00";
+
+      const endTime =
+        entry.endTime || existingByDay[day]?.endTime || "17:00";
+
+      if (isWorking && (!isValidTime(startTime) || !isValidTime(endTime))) {
+        return res.status(400).json({
+          message: `Please provide a valid start/end time for ${day}`,
+        });
+      }
+
+      if (isWorking && startTime >= endTime) {
+        return res.status(400).json({
+          message: `Start time must be before end time on ${day}`,
+        });
+      }
+
+      const slotDuration =
+        Number(entry.slotDuration) || existingByDay[day]?.slotDuration || 10;
+
+      nextSchedule.push({
+        day,
+        isWorking,
+        startTime,
+        endTime,
+        slotDuration,
+        // A doctor edits which days/hours they work — existing
+        // breaks for that day are preserved as-is here.
+        breaks: existingByDay[day]?.breaks || [],
+      });
+    }
+
+    doctor.weeklySchedule = nextSchedule;
+
+    await doctor.save();
+
+    res.json(doctor);
   } catch (error) {
     res.status(500).json({
       message: error.message,
