@@ -243,9 +243,7 @@ export const searchHospitals = async (req, res) => {
     }
 
     if (icu === "true") {
-      // `facilities` is a free-text string array (e.g. "ICU",
-      // "MRI", "Blood Bank") rather than a dedicated boolean
-      // field, so match it the same way the rest of the app does.
+
 
       filter.facilities = {
         $regex: "icu",
@@ -255,9 +253,7 @@ export const searchHospitals = async (req, res) => {
     }
 
     if (acceptingPatients === "true") {
-      // No dedicated flag exists on the model for this yet —
-      // "accepting patients" is treated as "has open beds",
-      // which is the closest real signal currently tracked.
+
 
       filter["beds.available"] = {
         $gt: 0,
@@ -289,16 +285,6 @@ export const searchHospitals = async (req, res) => {
         ]
       : null;
 
-    // =====================================
-    // GEO-DISTANCE SEARCH
-    // Only when coordinates were supplied.
-    // Uses the existing 2dsphere index on
-    // `location` via $geoNear, which both
-    // filters by radius AND returns each
-    // hospital's distance — far cheaper and
-    // more accurate than calling an external
-    // API per hospital.
-    // =====================================
 
     if (lat && lng) {
       const maxDistanceMeters = (Number(distance) || 25) * 1000;

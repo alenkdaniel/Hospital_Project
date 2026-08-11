@@ -1,16 +1,5 @@
 import mongoose from "mongoose";
 
-// ===============================
-// REVIEW SCHEMA
-//
-// One review document per completed
-// appointment. A single submission
-// covers BOTH the doctor and the
-// hospital, since a patient
-// naturally has an opinion on both
-// after a visit — no need for two
-// separate forms/documents.
-// ===============================
 
 const reviewSchema = new mongoose.Schema(
   {

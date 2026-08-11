@@ -212,25 +212,48 @@ const Hospitals = () => {
   // =====================================
 
   const fetchHospitals = () => {
-    dispatch(
-      searchHospitals({
-        search,
-        city,
-        district,
-        rating,
-        emergency,
-        icu,
-        acceptingPatients,
+    // A district search should show every hospital in that
+    // district — it must never be narrowed by a leftover city
+    // pick or GPS radius from the separate Location field. That
+    // combination is the actual bug: searching "Chengannur" in
+    // Location, then "Alappuzha" in District, silently kept the
+    // old city + 25km-radius filters and collapsed the results
+    // down to just the one hospital that satisfied all three.
+    const isDistrictSearch = district.trim().length > 0;
 
-        // Only present when a GPS location or a Mapbox place
-        // has been picked — the backend switches to a proper
-        // $geoNear radius search when these are supplied.
+     dispatch(
+    searchHospitals({
+      search,
+      city,
+      district,
+      rating,
+      emergency,
+      icu,
+      acceptingPatients,
 
-        ...(userCoords
-          ? { lat: userCoords.lat, lng: userCoords.lng, distance }
-          : {}),
-      })
-    );
+      // Apply geo search only when district search is NOT active
+      ...(userCoords && !district
+        ? {
+            lat: userCoords.lat,
+            lng: userCoords.lng,
+            distance,
+          }
+        : {}),
+    })
+  );
+  };
+
+  // District and Location are mutually exclusive search modes —
+  // typing a district clears whatever city/GPS pick was active,
+  // so the two can't combine into an over-narrow filter.
+  const handleDistrictChange = (value) => {
+    setDistrict(value);
+
+    if (value.trim().length > 0) {
+      setCity("");
+      setSuggestions([]);
+      setUserCoords(null);
+    }
   };
 
   const handleSelectLocation = (place) => {
@@ -251,6 +274,12 @@ const Hospitals = () => {
 
     setUserCoords({ lat: placeLat, lng: placeLng });
 
+    // Picking a city/place is the other search mode — clear any
+    // leftover District text so it can't combine with this city +
+    // GPS-radius search (same reason handleDistrictChange clears
+    // city/coords in the other direction).
+    setDistrict("");
+
     // The effect below re-fetches automatically once userCoords
     // changes, but city/search changed in the same tick too, so
     // fire immediately with the fresh values rather than waiting.
@@ -259,7 +288,6 @@ const Hospitals = () => {
       searchHospitals({
         city: selectedCity,
         search,
-        district,
         rating,
         emergency,
         icu,
@@ -280,19 +308,26 @@ const Hospitals = () => {
 
     setCurrentPage(1);
 
+    // District search should not use geo coordinates
+  if (district) {
+    dispatch(
+      searchHospitals({
+        search,
+        city,
+        district,
+        rating,
+        emergency,
+        icu,
+        acceptingPatients,
+      })
+    );
+
+    return;
+  }
+
+
     fetchHospitals()
 
-    // dispatch(
-    //   searchHospitals({
-    //     search,
-    //     city,
-    //     rating,
-    //     emergency,
-    //     icu,
-    //     acceptingPatients,
-    //     distance,
-    //   })
-    // );
 
   };
 
@@ -315,6 +350,10 @@ const Hospitals = () => {
 
         setCity("");
 
+        // Same mutual-exclusivity rule as the other search modes —
+        // "near me" shouldn't combine with a leftover district text.
+        setDistrict("");
+
         setUserCoords({ lat: latitude, lng: longitude });
 
         // Combine with whatever filters (rating, emergency,
@@ -324,7 +363,6 @@ const Hospitals = () => {
         dispatch(
           searchHospitals({
             search,
-            district,
             rating,
             emergency,
             icu,
@@ -411,7 +449,7 @@ bg-gray-50
         city={city}
         setCity={setCity}
         district={district}
-        setDistrict={setDistrict}
+        setDistrict={handleDistrictChange}
         suggestions={suggestions}
         searchLoading={searchLoading}
         handleSelectLocation={handleSelectLocation}

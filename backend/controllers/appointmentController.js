@@ -1470,6 +1470,7 @@ Current Status : ${status.replace("_", " ")}
   }
 };
 
+
 export const completeConsultation = async (req, res) => {
   try {
     const doctor = await Doctor.findOne({

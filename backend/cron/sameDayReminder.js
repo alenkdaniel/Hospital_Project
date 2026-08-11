@@ -11,23 +11,8 @@ import { convertTimeToMinutes } from "../utils/convertTime.js";
 // ⭐ PUSH NOTIFICATIONS (SOCKET.IO)
 import { createAndSendNotification } from "../services/notificationService.js";
 
-// =================================
-// SAME-DAY APPOINTMENT REMINDER CRON
-//
-// Runs every 5 minutes and emails
-// patients whose consultation is
-// starting within the next hour,
-// TODAY.
-//
-// Works alongside the existing
-// "1 day before" reminder cron —
-// this one only looks at today's
-// appointments and fires close to
-// the actual slot time.
-// =================================
 
-// How long before the slot start
-// time the reminder should go out.
+
 
 const REMINDER_WINDOW_MINUTES = 60;
 
