@@ -49,12 +49,32 @@ const getAllReviews = async (params = {}) => {
   return response.data;
 };
 
+// =====================================
+// GET REVIEW STATS (SUMMARY STRIP)
+// =====================================
+
+const getReviewStats = async () => {
+  const response = await API.get("/reviews/stats");
+  return response.data;
+};
+
+// =====================================
+// TOGGLE "HELPFUL" ON A REVIEW
+// =====================================
+
+const toggleHelpful = async (reviewId) => {
+  const response = await API.post(`/reviews/${reviewId}/helpful`);
+  return response.data;
+};
+
 const reviewService = {
   submitReview,
   getDoctorReviews,
   getHospitalReviews,
   getFeaturedReviews,
   getAllReviews,
+  getReviewStats,
+  toggleHelpful,
 };
 
 export default reviewService;

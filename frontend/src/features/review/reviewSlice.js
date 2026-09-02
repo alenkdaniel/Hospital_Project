@@ -23,7 +23,10 @@ const initialState = {
   allReviews: [],
   page: 1,
   totalPages: 1,
+  stats: null,
+  specialties: [],
   isLoading: false,
+  isStatsLoading: false,
   isSubmitting: false,
   isError: false,
   isSuccess: false,
@@ -95,7 +98,7 @@ export const getFeaturedReviews = createAsyncThunk(
 );
 
 // =====================================
-// GET ALL REVIEWS (PAGINATED)
+// GET ALL REVIEWS (PAGINATED, FILTERABLE)
 // =====================================
 
 export const getAllReviews = createAsyncThunk(
@@ -104,6 +107,39 @@ export const getAllReviews = createAsyncThunk(
   async (params, thunkAPI) => {
     try {
       return await reviewService.getAllReviews(params);
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+// =====================================
+// GET REVIEW STATS (SUMMARY STRIP)
+// =====================================
+
+export const getReviewStats = createAsyncThunk(
+  "review/getStats",
+
+  async (_, thunkAPI) => {
+    try {
+      return await reviewService.getReviewStats();
+    } catch (error) {
+      return thunkAPI.rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
+
+// =====================================
+// TOGGLE "HELPFUL" ON A REVIEW
+// =====================================
+
+export const toggleHelpful = createAsyncThunk(
+  "review/toggleHelpful",
+
+  async (reviewId, thunkAPI) => {
+    try {
+      const data = await reviewService.toggleHelpful(reviewId);
+      return { reviewId, ...data };
     } catch (error) {
       return thunkAPI.rejectWithValue(getErrorMessage(error));
     }
@@ -201,7 +237,7 @@ const reviewSlice = createSlice({
         state.message = action.payload;
       })
 
-      // ALL REVIEWS (PAGINATED PAGE)
+      // ALL REVIEWS (PAGINATED, FILTERABLE PAGE)
 
       .addCase(getAllReviews.pending, (state) => {
         state.isLoading = true;
@@ -210,10 +246,9 @@ const reviewSlice = createSlice({
       .addCase(getAllReviews.fulfilled, (state, action) => {
         state.isLoading = false;
 
-        state.allReviews =
-          action.payload.page === 1
-            ? action.payload.reviews
-            : [...state.allReviews, ...action.payload.reviews];
+        // Real pagination now (page-number based, not "load more"),
+        // so each fetch replaces the current page's reviews outright.
+        state.allReviews = action.payload.reviews;
 
         state.page = action.payload.page;
         state.totalPages = action.payload.totalPages;
@@ -223,6 +258,35 @@ const reviewSlice = createSlice({
         state.isLoading = false;
         state.isError = true;
         state.message = action.payload;
+      })
+
+      // STATS (SUMMARY STRIP + SPECIALTY CHIPS)
+
+      .addCase(getReviewStats.pending, (state) => {
+        state.isStatsLoading = true;
+      })
+
+      .addCase(getReviewStats.fulfilled, (state, action) => {
+        state.isStatsLoading = false;
+        state.stats = action.payload.stats;
+        state.specialties = action.payload.specialties;
+      })
+
+      .addCase(getReviewStats.rejected, (state, action) => {
+        state.isStatsLoading = false;
+        state.message = action.payload;
+      })
+
+      // TOGGLE HELPFUL — update just that one review in place
+
+      .addCase(toggleHelpful.fulfilled, (state, action) => {
+        const { reviewId, helpfulCount } = action.payload;
+
+        const review = state.allReviews.find((r) => r._id === reviewId);
+
+        if (review) {
+          review.helpfulCount = helpfulCount;
+        }
       });
   },
 });

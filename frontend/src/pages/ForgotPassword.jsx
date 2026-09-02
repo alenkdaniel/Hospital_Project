@@ -11,12 +11,17 @@ const ForgotPassword = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        // Normalize before sending — stored accounts are always
+        // lowercase/trimmed, so a stray leading space or a
+        // capitalized letter (common on mobile keyboards) would
+        // otherwise look like a different email than the one on file.
+        const normalizedEmail = email.trim().toLowerCase();
         try {
             setLoading(true);
-            const { data } = await API.post("/auth/forgot-password", { email })
+            const { data } = await API.post("/auth/forgot-password", { email: normalizedEmail })
             toast.success(data.message)
             setEmail("");
-            navigate("/reset-password", { state: { email }, })
+            navigate("/reset-password", { state: { email: normalizedEmail }, })
         } catch (error) {
             toast.error(error.response?.data?.message || "Something went wrong!")
         } finally {

@@ -15,17 +15,29 @@ import sendEmail from "../services/emailService.js";
 
 import emailTemplate from "../templates/emailTemplate.js";
 
+// The User schema normalizes email with `lowercase: true, trim: true`,
+// but that only applies when a document is saved — NOT when it's used
+// as a query filter (Mongoose doesn't run schema setters on queries
+// unless `runSettersOnQuery` is enabled). So every `User.findOne({ email })`
+// below must normalize the incoming email itself, or a stored address
+// like "doctor@hospital.com" will silently fail to match "Doctor@Hospital.com"
+// or " doctor@hospital.com " typed by the user — this is what was causing
+// "forgot password" (and login) to look like it worked but never actually
+// find the account, so no OTP email was ever sent.
+const normalizeEmail = (email) =>
+  typeof email === "string" ? email.trim().toLowerCase() : email;
+
 export const register = async (req, res) => {
   try {
     const {
       name,
 
-      email,
-
       password,
 
       role,
     } = req.body;
+
+    const email = normalizeEmail(req.body.email);
 
     const allowedRoles = ["patient", "hospital_admin"];
 
@@ -127,10 +139,10 @@ export const register = async (req, res) => {
 export const loginUser = async (req, res) => {
   try {
     const {
-      email,
-
       password,
     } = req.body;
+
+    const email = normalizeEmail(req.body.email);
 
     const user = await User.findOne({
       email,
@@ -209,10 +221,10 @@ export const loginUser = async (req, res) => {
 export const verifyEmail = async (req, res) => {
   try {
     const {
-      email,
-
       otp,
     } = req.body;
+
+    const email = normalizeEmail(req.body.email);
 
     const user = await User.findOne({
       email,
@@ -307,7 +319,7 @@ export const verifyEmail = async (req, res) => {
 };
 export const resendOTP = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = normalizeEmail(req.body.email);
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -375,7 +387,7 @@ export const resendOTP = async (req, res) => {
 
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = normalizeEmail(req.body.email);
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(200).json({
@@ -433,7 +445,8 @@ export const forgotPassword = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-    const { email, otp, newPassword } = req.body;
+    const { otp, newPassword } = req.body;
+    const email = normalizeEmail(req.body.email);
     const user = await User.findOne({
       email,
     }).select("+passwordReset.otp +passwordReset.expiresAt +password");
@@ -487,12 +500,12 @@ export const googleAuth = async (req, res) => {
     const {
       name,
 
-      email,
-
       image,
 
       role,
     } = req.body;
+
+    const email = normalizeEmail(req.body.email);
 
     let user = await User.findOne({
       email,

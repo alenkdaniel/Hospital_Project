@@ -19,140 +19,66 @@ const HospitalSearch = ({
   findNearMe,
 }) => {
   return (
-    <section className="bg-white border-b">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
+    <section className="bg-ink-50">
+      <div className="mx-auto max-w-7xl px-6 pb-10 pt-12 lg:px-8">
+        <h1 className="text-4xl font-extrabold tracking-tight text-ink-900 md:text-5xl">
+          Find Premium Care Facilities
+        </h1>
+        <p className="mt-3 text-lg text-ink-500">
+          Discover top-rated hospitals and specialized medical centers near you.
+        </p>
 
-        <div className="grid lg:grid-cols-[1.1fr_1.1fr_1fr_220px] gap-5">
-
+        <div className="mt-8 grid gap-3 rounded-3xl border border-ink-100 bg-white p-3 shadow-sm lg:grid-cols-[1.3fr_1fr_1fr_auto_auto]">
           {/* Search */}
-
-          <div>
-            <label className="block mb-3 text-sm font-semibold text-gray-700">
-              Specialty or Hospital Name
-            </label>
-
-            <div className="relative">
-
-              <Search
-                size={20}
-                className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="e.g. Cardiology, Apollo Hospital"
-                className="
-                w-full
-                rounded-2xl
-                border
-                border-gray-300
-                bg-white
-                py-4
-                pl-14
-                pr-5
-                outline-none
-                transition
-                focus:border-blue-600
-                "
-              />
-            </div>
+          <div className="relative">
+            <Search
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400"
+            />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by hospital name, condition, or specialty..."
+              className="h-14 w-full rounded-2xl border border-transparent bg-ink-50 pl-11 pr-4 text-sm outline-none transition focus:border-brand-600 focus:bg-white"
+            />
           </div>
 
           {/* Location */}
-
           <div className="relative">
+            <MapPin
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400"
+            />
+            <input
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="City or area..."
+              className="h-14 w-full rounded-2xl border border-transparent bg-ink-50 pl-11 pr-10 text-sm outline-none transition focus:border-brand-600 focus:bg-white"
+            />
 
-            <label className="block mb-3 text-sm font-semibold text-gray-700">
-              Location
-            </label>
-
-            <div className="relative">
-
-              <MapPin
-                size={20}
-                className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"
+            {searchLoading && (
+              <Loader2
+                className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-brand-700"
+                size={16}
               />
-
-              <input
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Search city..."
-                className="
-                w-full
-                rounded-2xl
-                border
-                border-gray-300
-                bg-white
-                py-4
-                pl-14
-                pr-12
-                outline-none
-                transition
-                focus:border-blue-600
-                "
-              />
-
-              {searchLoading && (
-                <Loader2
-                  className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-blue-600"
-                  size={18}
-                />
-              )}
-            </div>
+            )}
 
             {/* Suggestions */}
-
             {suggestions.length > 0 && (
-              <div
-                className="
-                absolute
-                left-0
-                right-0
-                top-full
-                mt-2
-                overflow-hidden
-                rounded-2xl
-                border
-                bg-white
-                shadow-2xl
-                z-50
-                "
-              >
+              <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-2xl">
                 {suggestions.map((place) => (
                   <button
                     key={place.id}
                     type="button"
                     onClick={() => handleSelectLocation(place)}
-                    className="
-                    flex
-                    w-full
-                    items-start
-                    gap-4
-                    px-5
-                    py-4
-                    text-left
-                    transition
-                    hover:bg-blue-50
-                    border-b
-                    last:border-none
-                    "
+                    className="flex w-full items-start gap-3 border-b border-ink-100 px-4 py-3 text-left transition last:border-none hover:bg-brand-50"
                   >
-                    <MapPin
-                      size={18}
-                      className="mt-1 text-blue-600"
-                    />
-
+                    <MapPin size={16} className="mt-1 shrink-0 text-brand-700" />
                     <div>
-
-                      <p className="font-medium text-gray-800">
+                      <p className="text-sm font-medium text-ink-800">
                         {place.text}
                       </p>
-
-                      <p className="text-sm text-gray-500">
-                        {place.place_name}
-                      </p>
-
+                      <p className="text-xs text-ink-500">{place.place_name}</p>
                     </div>
                   </button>
                 ))}
@@ -161,83 +87,37 @@ const HospitalSearch = ({
           </div>
 
           {/* District */}
-
-          <div>
-            <label className="block mb-3 text-sm font-semibold text-gray-700">
-              District
-            </label>
-
-            <div className="relative">
-
-              <MapPin
-                size={20}
-                className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-
-              <input
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                placeholder="e.g. Ernakulam"
-                className="
-                w-full
-                rounded-2xl
-                border
-                border-gray-300
-                bg-white
-                py-4
-                pl-14
-                pr-5
-                outline-none
-                transition
-                focus:border-blue-600
-                "
-              />
-            </div>
+          <div className="relative">
+            <MapPin
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400"
+            />
+            <input
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
+              placeholder="District, e.g. Ernakulam"
+              className="h-14 w-full rounded-2xl border border-transparent bg-ink-50 pl-11 pr-4 text-sm outline-none transition focus:border-brand-600 focus:bg-white"
+            />
           </div>
 
-          {/* Buttons */}
+          {/* Search button */}
+          <button
+            onClick={handleSearch}
+            className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-brand-800 px-7 text-sm font-semibold text-white transition hover:bg-brand-900"
+          >
+            <Search size={18} />
+            Search
+          </button>
 
-          <div className="flex items-end gap-3">
-
-            <button
-              onClick={handleSearch}
-              className="
-              flex-1
-              rounded-2xl
-              bg-blue-600
-              py-4
-              font-semibold
-              text-white
-              transition
-              hover:bg-blue-700
-              "
-            >
-              Search Facilities
-            </button>
-
-            <button
-              onClick={findNearMe}
-              className="
-              flex
-              h-[58px]
-              w-[58px]
-              items-center
-              justify-center
-              rounded-2xl
-              border
-              border-blue-600
-              text-blue-600
-              transition
-              hover:bg-blue-50
-              "
-            >
-              <Navigation size={22} />
-            </button>
-
-          </div>
-
+          {/* Near me */}
+          <button
+            onClick={findNearMe}
+            title="Find near me"
+            className="flex h-14 w-14 items-center justify-center rounded-2xl border border-brand-700 text-brand-700 transition hover:bg-brand-50"
+          >
+            <Navigation size={20} />
+          </button>
         </div>
-
       </div>
     </section>
   );

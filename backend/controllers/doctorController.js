@@ -135,8 +135,13 @@ export const createDoctor = async (req, res) => {
       // console.log("STEP 3.2");
       // console.log(req.body.contact?.email);
 
+      // Normalize the same way the User schema does on save
+      // (lowercase + trim) — otherwise this duplicate check can
+      // miss an existing account that differs only in case/spacing,
+      // and the doctor ends up unable to log in or reset their
+      // password with the email exactly as they type it.
       const existingUser = await User.findOne({
-        email: req.body.contact.email,
+        email: req.body.contact.email?.trim().toLowerCase(),
       });
 
       // console.log("STEP 4 - Email checked");

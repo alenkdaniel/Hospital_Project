@@ -1,10 +1,6 @@
 import axios from "axios";
 
-import { useEffect, useState, useRef } from "react";
-
-// import { Link } from "react-router-dom";
-
-// import { motion } from "framer-motion";
+import { useEffect, useState, useRef, useMemo } from "react";
 
 import { useDispatch, useSelector } from "react-redux";
 
@@ -19,6 +15,8 @@ import HospitalSearch from "../../components/hospital/HospitalSearch";
 import HospitalFilters from "../../components/hospital/HospitalFilters";
 
 import HospitalCard from "../../components/hospital/HospitalCard";
+
+import HospitalSort from "../../components/hospital/HospitalSort";
 
 const Hospitals = () => {
 
@@ -65,7 +63,12 @@ const Hospitals = () => {
 
   const [userCoords, setUserCoords] = useState(null);
 
-  const ITEMS_PER_PAGE = 5;
+  // Display-only sort — applied on the client to whatever the
+  // current result set is, so it works the same whether we're
+  // looking at a plain search or a geo/district result.
+  const [sortBy, setSortBy] = useState("recommended");
+
+  const ITEMS_PER_PAGE = 6;
 
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -200,12 +203,6 @@ const Hospitals = () => {
     };
 
   }, [distance, userCoords]);
-
-  // const getContextValue = (place, type) => {
-  //   return (
-  //     place.context?.find((item) => item.id.startsWith(type))?.text || ""
-  //   );
-  // };
 
   // =====================================
   // COMMON SEARCH
@@ -381,14 +378,38 @@ const Hospitals = () => {
   };
 
   // =====================================
+  // SORT (client-side, applied to whatever result set we have)
+  // =====================================
+
+  const sortedHospitals = useMemo(() => {
+    const list = [...hospitals];
+
+    switch (sortBy) {
+      case "rating":
+        return list.sort(
+          (a, b) => (b.rating?.average || 0) - (a.rating?.average || 0)
+        );
+      case "distance":
+        return list.sort(
+          (a, b) =>
+            (a.distanceInKm ?? Infinity) - (b.distanceInKm ?? Infinity)
+        );
+      case "name":
+        return list.sort((a, b) => a.name.localeCompare(b.name));
+      default:
+        return list;
+    }
+  }, [hospitals, sortBy]);
+
+  // =====================================
   // PAGINATION
   // =====================================
 
   const totalPages = Math.ceil(
-    hospitals.length / ITEMS_PER_PAGE
+    sortedHospitals.length / ITEMS_PER_PAGE
   );
 
-  const currentHospitals = hospitals.slice(
+  const currentHospitals = sortedHospitals.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -404,7 +425,7 @@ const Hospitals = () => {
   const isDistrictSearch = district.trim().length > 0;
 
   const hospitalsByCity = isDistrictSearch
-    ? hospitals.reduce((groups, hospital) => {
+    ? sortedHospitals.reduce((groups, hospital) => {
         const cityName = hospital.address?.city || "Other";
 
         if (!groups[cityName]) {
@@ -420,26 +441,14 @@ const Hospitals = () => {
   if (isError) {
 
     return (
-      <div
-        className="
-pt-32
-text-center
-text-red-500
-text-xl
-"
-      >
+      <div className="pt-32 text-center text-xl text-red-500">
         {message}
       </div>
     );
   }
 
   return (
-    <div
-      className="
-min-h-screen
-bg-gray-50
-"
-    >
+    <div className="min-h-screen bg-ink-50">
 
       {/* FILTER AREA */}
 
@@ -458,7 +467,7 @@ bg-gray-50
       />
 
       {userCoords && (
-        <div className="mx-auto max-w-7xl px-10 md:px-24">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <button
             onClick={() => {
               setUserCoords(null);
@@ -476,7 +485,7 @@ bg-gray-50
                 }),
               );
             }}
-            className="mt-4 inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+            className="mt-2 inline-flex items-center gap-2 rounded-full bg-brand-50 px-4 py-2 text-sm font-medium text-brand-800 transition hover:bg-brand-100"
           >
             📍 Showing results within {distance} km ✕ Clear
           </button>
@@ -486,42 +495,25 @@ bg-gray-50
       {/* LOADING */}
 
       {isLoading && (
-        <p
-          className="
-text-center
-mt-20
-text-xl
-"
-        >
+        <p className="mt-20 text-center text-xl text-ink-500">
           Loading Hospitals...
         </p>
       )}
 
       {/* LIST */}
 
-      <section
-        className="
-px-10
-md:px-24
-py-20
-"
-      >
+      <section className="px-6 py-12 lg:px-8">
+
         {hospitals.length === 0 && !isLoading && (
-          <h2
-            className="
-text-center
-text-2xl
-font-bold
-"
-          >
+          <h2 className="text-center text-2xl font-bold text-ink-900">
             No hospitals found
           </h2>
         )}
 
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-[320px_1fr] gap-8">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[300px_1fr]">
 
           {/* Left Sidebar */}
-          <div className="sticky top-28 h-fit">
+          <div className="h-fit lg:sticky lg:top-28">
 
             <HospitalFilters
               rating={rating}
@@ -543,27 +535,41 @@ font-bold
 
           <div>
 
+            {hospitals.length > 0 && (
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                <p className="text-ink-600">
+                  Showing{" "}
+                  <span className="font-semibold text-ink-900">
+                    {hospitals.length}
+                  </span>{" "}
+                  premium {hospitals.length === 1 ? "facility" : "facilities"}
+                </p>
 
-            <div className="space-y-8">
+                {!isDistrictSearch && (
+                  <HospitalSort value={sortBy} onChange={setSortBy} />
+                )}
+              </div>
+            )}
 
-              {isDistrictSearch ? (
+            {isDistrictSearch ? (
 
-                // ⭐ DISTRICT VIEW — grouped by city, no pagination:
-                // the point of a district search is to see every
-                // city's hospitals at a glance.
+              // ⭐ DISTRICT VIEW — grouped by city, no pagination:
+              // the point of a district search is to see every
+              // city's hospitals at a glance.
 
-                Object.entries(hospitalsByCity).map(([cityName, cityHospitals]) => (
+              <div className="space-y-12">
+                {Object.entries(hospitalsByCity).map(([cityName, cityHospitals]) => (
                   <div key={cityName}>
 
-                    <h3 className="mb-4 flex items-center gap-2 text-xl font-bold text-gray-800">
+                    <h3 className="mb-4 flex items-center gap-2 text-xl font-bold text-ink-900">
                       {cityName}
 
-                      <span className="text-sm font-normal text-gray-500">
+                      <span className="text-sm font-normal text-ink-500">
                         ({cityHospitals.length} {cityHospitals.length === 1 ? "hospital" : "hospitals"})
                       </span>
                     </h3>
 
-                    <div className="space-y-6 mb-10">
+                    <div className="grid gap-6 md:grid-cols-2">
                       {cityHospitals.map((hospital) => (
                         <HospitalCard
                           key={hospital._id}
@@ -578,11 +584,13 @@ font-bold
                     </div>
 
                   </div>
-                ))
+                ))}
+              </div>
 
-              ) : (
+            ) : (
 
-                currentHospitals.map((hospital) => (
+              <div className="grid gap-6 md:grid-cols-2">
+                {currentHospitals.map((hospital) => (
                   <HospitalCard
                     key={hospital._id}
                     hospital={hospital}
@@ -592,11 +600,10 @@ font-bold
                         : undefined
                     }
                   />
-                ))
+                ))}
+              </div>
 
-              )}
-
-            </div>
+            )}
 
             {!isDistrictSearch && totalPages > 1 && (
 
@@ -607,16 +614,7 @@ font-bold
                   <button
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage(currentPage - 1)}
-                    className="
-h-12
-w-12
-rounded-full
-border
-text-xl
-transition
-hover:bg-gray-100
-disabled:opacity-40
-"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-ink-200 bg-white text-lg text-ink-600 transition hover:bg-ink-100 disabled:opacity-40"
                   >
                     ‹
                   </button>
@@ -630,21 +628,11 @@ disabled:opacity-40
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`
-h-12
-w-12
-rounded-full
-border
-font-semibold
-transition
-
-${currentPage === page
-                            ?
-                            "bg-blue-600 border-blue-600 text-white"
-                            :
-                            "bg-white hover:bg-gray-100"
-                          }
-`}
+                        className={`flex h-11 w-11 items-center justify-center rounded-full border font-semibold transition ${
+                          currentPage === page
+                            ? "border-brand-800 bg-brand-800 text-white"
+                            : "border-ink-200 bg-white text-ink-700 hover:bg-ink-100"
+                        }`}
                       >
 
                         {page}
@@ -658,18 +646,9 @@ ${currentPage === page
                   <button
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage(currentPage + 1)}
-                    className="
-h-12
-w-12
-rounded-full
-border
-text-xl
-transition
-hover:bg-gray-100
-disabled:opacity-40
-"
+                    className="flex h-11 w-11 items-center justify-center rounded-full border border-ink-200 bg-white text-lg text-ink-600 transition hover:bg-ink-100 disabled:opacity-40"
                   >
-                    ,
+                    ›
                   </button>
 
                 </div>

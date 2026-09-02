@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
@@ -6,26 +6,60 @@ import { getDoctors, resetDoctor } from "../../features/doctor/doctorSlice";
 import {
   Star,
   Search,
-  SlidersHorizontal,
-  ChevronDown,
-  X,
   MapPin,
   Award,
   IndianRupee,
-  Users,
   Calendar,
   Video,
   Stethoscope,
   ArrowRight,
   ArrowLeft,
-  Sparkles,
+  X,
+  ChevronDown,
+  ChevronUp,
+  BadgeCheck,
+  Briefcase,
 } from "lucide-react";
 
 const SORT_OPTIONS = [
+  { value: "recommended", label: "Recommended" },
   { value: "rating", label: "Highest Rated" },
   { value: "experience", label: "Most Experienced" },
   { value: "fee", label: "Fee: Low to High" },
 ];
+
+const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+// A doctor is "available" within a window of days if any day in that
+// window (starting today) has a working entry in their weekly schedule.
+// Doctors without a schedule on file are never excluded by this filter.
+const isAvailableWithinDays = (doctor, days) => {
+  if (!doctor.weeklySchedule?.length) return true;
+
+  const today = new Date();
+
+  for (let i = 0; i <= days; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+
+    const dayName = DAY_NAMES[d.getDay()];
+    const entry = doctor.weeklySchedule.find((s) => s.day === dayName);
+
+    if (entry?.isWorking) return true;
+  }
+
+  return false;
+};
+
+const ITEMS_PER_PAGE = 6;
 
 const Doctors = () => {
   const dispatch = useDispatch();
@@ -35,22 +69,19 @@ const Doctors = () => {
     (state) => state.doctor
   );
 
-  // Filter State
+  // Search
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSpecialization, setSelectedSpecialization] = useState("all");
-  const [minExperience, setMinExperience] = useState(0);
-  const [maxFee, setMaxFee] = useState(10000);
-  const [selectedHospital, setSelectedHospital] = useState("all");
-  const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState("rating");
-  const [sortOpen, setSortOpen] = useState(false);
+  const [locationTerm, setLocationTerm] = useState("");
+
+  // Filters
+  const [selectedDepartment, setSelectedDepartment] = useState("all");
+  const [availability, setAvailability] = useState("anytime");
+  const [minRating, setMinRating] = useState(0);
+  const [showAllSpecialties, setShowAllSpecialties] = useState(false);
+
+  const [sortBy, setSortBy] = useState("recommended");
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Derived State
-  const ITEMS_PER_PAGE = 12;
-  const isFirstRender = useRef(true);
-  const sortRef = useRef(null);
 
   // =====================================
   // LOAD DOCTORS
@@ -64,48 +95,65 @@ const Doctors = () => {
     };
   }, [dispatch]);
 
-  // Close the sort dropdown on outside click
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (sortRef.current && !sortRef.current.contains(e.target)) {
-        setSortOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    setCurrentPage(1);
+  }, [searchTerm, locationTerm, selectedDepartment, availability, minRating, sortBy]);
 
   // =====================================
-  // FILTER & SORT LOGIC
+  // SPECIALTY LIST (with counts, from the full unfiltered list)
   // =====================================
 
-  const filteredDoctors = doctors
-    ?.filter((doctor) => {
+  const specialtyCounts = useMemo(() => {
+    const counts = {};
+
+    (doctors || []).forEach((doctor) => {
+      const key = doctor.department || doctor.specialization;
+      if (!key) return;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [doctors]);
+
+  const visibleSpecialties = showAllSpecialties
+    ? specialtyCounts
+    : specialtyCounts.slice(0, 4);
+
+  // =====================================
+  // FILTER + SORT
+  // =====================================
+
+  const filteredDoctors = useMemo(() => {
+    const list = (doctors || []).filter((doctor) => {
+      const haystack = `${doctor.name} ${doctor.specialization} ${doctor.department}`.toLowerCase();
       const matchesSearch =
-        doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase());
+        !searchTerm || haystack.includes(searchTerm.toLowerCase());
 
-      const matchesSpecialization =
-        selectedSpecialization === "all" ||
-        doctor.specialization === selectedSpecialization;
+      const addr = doctor.hospital?.address;
+      const locationHaystack = `${addr?.city || ""} ${addr?.state || ""} ${addr?.pincode || ""}`.toLowerCase();
+      const matchesLocation =
+        !locationTerm || locationHaystack.includes(locationTerm.toLowerCase());
 
-      const matchesExperience = doctor.experience >= minExperience;
+      const matchesDepartment =
+        selectedDepartment === "all" ||
+        (doctor.department || doctor.specialization) === selectedDepartment;
 
-      const matchesFee = doctor.consultationFee <= maxFee;
+      const matchesAvailability =
+        availability === "anytime" ||
+        isAvailableWithinDays(doctor, availability === "today" ? 0 : 2);
 
-      const matchesHospital =
-        selectedHospital === "all" ||
-        doctor.hospital?._id === selectedHospital;
+      const matchesRating = (doctor.rating?.average || 0) >= minRating;
 
       return (
         matchesSearch &&
-        matchesSpecialization &&
-        matchesExperience &&
-        matchesFee &&
-        matchesHospital
+        matchesLocation &&
+        matchesDepartment &&
+        matchesAvailability &&
+        matchesRating
       );
-    })
-    .sort((a, b) => {
+    });
+
+    return [...list].sort((a, b) => {
       switch (sortBy) {
         case "rating":
           return (b.rating?.average || 0) - (a.rating?.average || 0);
@@ -114,41 +162,28 @@ const Doctors = () => {
         case "fee":
           return a.consultationFee - b.consultationFee;
         default:
-          return 0;
+          return (b.rating?.average || 0) - (a.rating?.average || 0);
       }
     });
+  }, [doctors, searchTerm, locationTerm, selectedDepartment, availability, minRating, sortBy]);
 
-  // Pagination
   const totalPages = Math.ceil(filteredDoctors.length / ITEMS_PER_PAGE);
   const paginatedDoctors = filteredDoctors.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Get unique values for filters
-  const specializations = [
-    "all",
-    ...new Set(doctors?.map((d) => d.specialization)),
-  ];
-  const hospitals = [
-    "all",
-    ...new Set(doctors?.map((d) => d.hospital?._id)),
-  ];
+  const hasActiveFilters =
+    selectedDepartment !== "all" || availability !== "anytime" || minRating !== 0;
 
-  const getHospitalName = (id) => {
-    return doctors?.find((d) => d.hospital?._id === id)?.hospital?.name || id;
+  const clearAll = () => {
+    setSelectedDepartment("all");
+    setAvailability("anytime");
+    setMinRating(0);
   };
 
-  const activeFilterCount =
-    (selectedSpecialization !== "all" ? 1 : 0) +
-    (minExperience > 0 ? 1 : 0) +
-    (maxFee < 10000 ? 1 : 0) +
-    (selectedHospital !== "all" ? 1 : 0);
-
-  // Reset pagination on filter change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedSpecialization, minExperience, maxFee, selectedHospital]);
+  const resultsLabel =
+    selectedDepartment !== "all" ? ` for ${selectedDepartment}` : "";
 
   // =====================================
   // ERROR HANDLING
@@ -156,9 +191,9 @@ const Doctors = () => {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-ink-50 flex items-center justify-center px-4">
+      <div className="flex min-h-screen items-center justify-center bg-ink-50 px-4">
         <div className="text-center">
-          <p className="text-2xl font-bold text-ink-900 mb-2">
+          <p className="mb-2 text-2xl font-bold text-ink-900">
             Something went wrong
           </p>
           <p className="text-ink-500">{message}</p>
@@ -173,355 +208,329 @@ const Doctors = () => {
 
   return (
     <div className="min-h-screen bg-ink-50">
-      {/* HERO SECTION */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="relative overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 py-20 pt-28 text-white md:py-28 md:pt-32"
-      >
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-            className="absolute -top-24 -right-24 h-96 w-96 rounded-full border border-white/10"
-          />
-          <motion.div
-            animate={{ rotate: -360 }}
-            transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
-            className="absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-white/5"
-          />
-        </div>
+      {/* HERO / SEARCH */}
+      <section className="bg-ink-50">
+        <div className="mx-auto max-w-7xl px-6 pb-10 pt-12 lg:px-8">
+          <h1 className="text-4xl font-extrabold tracking-tight text-ink-900 md:text-5xl">
+            Find a Doctor
+          </h1>
+          <p className="mt-3 text-lg text-ink-500">
+            Search our network of world-class specialists and book an
+            appointment directly.
+          </p>
 
-        <div className="relative z-10 mx-auto max-w-6xl px-4 md:px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="text-center"
-          >
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold">
-              <Sparkles size={14} />
-              {doctors?.length || 0}+ verified specialists
-            </span>
-
-            <h1 className="mt-5 text-4xl font-extrabold md:text-5xl">
-              Find Your Medical Expert
-            </h1>
-            <p className="mx-auto mt-3 max-w-2xl text-lg text-brand-50/90">
-              Connect with experienced doctors, read patient reviews, and book
-              appointments seamlessly
-            </p>
-          </motion.div>
-
-          {/* SEARCH BAR */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="mx-auto mt-10 max-w-2xl"
-          >
-            <div className="flex items-center gap-3 rounded-2xl border border-white/25 bg-white/10 p-2 backdrop-blur-sm">
-              <Search size={20} className="ml-3 flex-shrink-0 text-white/60" />
+          <div className="mt-8 grid gap-3 rounded-3xl border border-ink-100 bg-white p-3 shadow-sm lg:grid-cols-[1.4fr_1fr_auto]">
+            {/* Condition / doctor search */}
+            <div className="relative">
+              <Search
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400"
+              />
               <input
-                type="text"
-                placeholder="Search by doctor name or specialization..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 bg-transparent py-2.5 text-white placeholder-white/60 outline-none"
+                placeholder="Condition, procedure, doctor name..."
+                className="h-14 w-full rounded-2xl border border-transparent bg-ink-50 pl-11 pr-4 text-sm outline-none transition focus:border-brand-600 focus:bg-white"
               />
             </div>
-          </motion.div>
+
+            {/* Location */}
+            <div className="relative">
+              <MapPin
+                size={18}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400"
+              />
+              <input
+                value={locationTerm}
+                onChange={(e) => setLocationTerm(e.target.value)}
+                placeholder="City, state, or zip code"
+                className="h-14 w-full rounded-2xl border border-transparent bg-ink-50 pl-11 pr-4 text-sm outline-none transition focus:border-brand-600 focus:bg-white"
+              />
+            </div>
+
+            {/* Search button */}
+            <button
+              onClick={() => setCurrentPage(1)}
+              className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-brand-800 px-8 text-sm font-semibold text-white transition hover:bg-brand-900"
+            >
+              Search Doctors
+            </button>
+          </div>
         </div>
-      </motion.div>
+      </section>
 
       {/* MAIN CONTENT */}
-      <div className="mx-auto max-w-6xl px-4 py-12 md:px-6 lg:px-8">
+      <section className="px-6 pb-16 lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[300px_1fr]">
+          {/* SIDEBAR FILTERS */}
+          <aside className="h-fit rounded-3xl border border-ink-100 bg-white p-7 shadow-sm lg:sticky lg:top-28">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-ink-900">Filters</h2>
 
-        {/* FILTERS & SORT */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 space-y-4"
-        >
-          {/* Filter Toggle & Results Count */}
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 shadow-sm transition ${
-                showFilters
-                  ? "border-brand-600 bg-brand-50 text-brand-700"
-                  : "border-ink-200 bg-white text-ink-700 hover:border-brand-200"
-              }`}
-            >
-              <SlidersHorizontal size={17} />
-              <span className="font-semibold">Filters</span>
-              {activeFilterCount > 0 && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
-                  {activeFilterCount}
-                </span>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="text-sm font-semibold text-brand-700 transition hover:text-brand-900"
+                >
+                  Clear all
+                </button>
               )}
-              <ChevronDown
-                size={16}
-                className={`transition-transform ${showFilters ? "rotate-180" : ""}`}
-              />
-            </button>
-
-            <div className="font-semibold text-ink-700">
-              <span className="text-brand-700">{filteredDoctors.length}</span>{" "}
-              doctors found
             </div>
 
-            {/* Sort Dropdown */}
-            <div className="relative ml-auto" ref={sortRef}>
-              <button
-                onClick={() => setSortOpen(!sortOpen)}
-                className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 shadow-sm transition ${
-                  sortOpen
-                    ? "border-brand-600 bg-brand-50 text-brand-700"
-                    : "border-ink-200 bg-white text-ink-700 hover:border-brand-200"
-                }`}
-              >
-                <span className="font-medium">
-                  Sort: {SORT_OPTIONS.find((o) => o.value === sortBy)?.label}
+            {/* Specialty */}
+            <div className="border-b border-ink-100 py-6">
+              <h3 className="mb-4 text-xs font-bold uppercase tracking-wide text-ink-500">
+                Specialty
+              </h3>
+
+              <div className="space-y-3">
+                <label className="flex cursor-pointer items-center gap-3 text-sm text-ink-700">
+                  <input
+                    type="checkbox"
+                    checked={selectedDepartment === "all"}
+                    onChange={() => setSelectedDepartment("all")}
+                    className="h-5 w-5 rounded accent-brand-700"
+                  />
+                  <span>All specialties</span>
+                </label>
+
+                {visibleSpecialties.map(([name, count]) => (
+                  <label
+                    key={name}
+                    className="flex cursor-pointer items-center gap-3 text-sm text-ink-700"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedDepartment === name}
+                      onChange={() =>
+                        setSelectedDepartment(
+                          selectedDepartment === name ? "all" : name
+                        )
+                      }
+                      className="h-5 w-5 rounded accent-brand-700"
+                    />
+                    <span>
+                      {name} <span className="text-ink-400">({count})</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              {specialtyCounts.length > 4 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllSpecialties((s) => !s)}
+                  className="mt-4 flex items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-900"
+                >
+                  {showAllSpecialties ? (
+                    <>
+                      Show less <ChevronUp size={15} />
+                    </>
+                  ) : (
+                    <>
+                      + View more <ChevronDown size={15} />
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Availability */}
+            <div className="border-b border-ink-100 py-6">
+              <h3 className="mb-4 text-xs font-bold uppercase tracking-wide text-ink-500">
+                Availability
+              </h3>
+
+              <div className="space-y-3">
+                {[
+                  { value: "today", label: "Today" },
+                  { value: "3days", label: "Within 3 Days" },
+                  { value: "anytime", label: "Anytime" },
+                ].map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex cursor-pointer items-center gap-3 text-sm text-ink-700"
+                  >
+                    <input
+                      type="radio"
+                      checked={availability === opt.value}
+                      onChange={() => setAvailability(opt.value)}
+                      className="h-5 w-5 accent-brand-700"
+                    />
+                    <span>{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Patient Rating */}
+            <div className="pt-6">
+              <h3 className="mb-4 text-xs font-bold uppercase tracking-wide text-ink-500">
+                Patient Rating
+              </h3>
+
+              <div className="space-y-3">
+                {[
+                  { value: 4.8, label: "5.0" },
+                  { value: 4, label: "4.0 & Up" },
+                ].map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex cursor-pointer items-center gap-3 text-sm text-ink-700"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={minRating === opt.value}
+                      onChange={() =>
+                        setMinRating(minRating === opt.value ? 0 : opt.value)
+                      }
+                      className="h-5 w-5 rounded accent-brand-700"
+                    />
+                    <span className="flex items-center gap-1.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          size={14}
+                          className={
+                            i < Math.round(opt.value)
+                              ? "fill-amber-400 text-amber-400"
+                              : "text-ink-200"
+                          }
+                        />
+                      ))}
+                      {opt.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </aside>
+
+          {/* RIGHT SIDE */}
+          <div>
+            {/* Results header */}
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+              <p className="text-ink-600">
+                Showing{" "}
+                <span className="font-semibold text-ink-900">
+                  {filteredDoctors.length}
+                </span>{" "}
+                results{resultsLabel}
+              </p>
+
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-ink-500">
+                  Sort by:
                 </span>
-                <ChevronDown
-                  size={16}
-                  className={`transition-transform ${sortOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              <AnimatePresence>
-                {sortOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 z-40 mt-2 w-52 overflow-hidden rounded-2xl border border-ink-100 bg-white p-1.5 shadow-xl"
+                <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="h-11 cursor-pointer appearance-none rounded-xl border border-ink-200 bg-white pl-4 pr-10 text-sm font-medium text-ink-800 outline-none transition focus:border-brand-600"
                   >
-                    {SORT_OPTIONS.map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => {
-                          setSortBy(option.value);
-                          setSortOpen(false);
-                        }}
-                        className={`block w-full rounded-xl px-4 py-2.5 text-left text-sm font-medium transition ${
-                          sortBy === option.value
-                            ? "bg-brand-50 text-brand-700"
-                            : "text-ink-600 hover:bg-ink-50"
-                        }`}
-                      >
-                        {option.label}
-                      </button>
+                    {SORT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
                     ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </select>
+                  <ChevronDown
+                    size={16}
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-400"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* FILTER PANEL */}
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden rounded-2xl border border-ink-100 bg-white p-6 shadow-sm"
-              >
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                  {/* Specialization Filter */}
-                  <div>
-                    <label className="mb-3 block text-sm font-semibold text-ink-900">
-                      Specialization
-                    </label>
-                    <select
-                      value={selectedSpecialization}
-                      onChange={(e) => setSelectedSpecialization(e.target.value)}
-                      className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2.5 text-ink-900 outline-none transition hover:border-brand-300 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
-                    >
-                      {specializations.map((spec) => (
-                        <option key={spec} value={spec}>
-                          {spec === "all" ? "All Specializations" : spec}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Experience Filter */}
-                  <div>
-                    <label className="mb-3 block text-sm font-semibold text-ink-900">
-                      Experience: {minExperience}+ years
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="50"
-                      value={minExperience}
-                      onChange={(e) => setMinExperience(Number(e.target.value))}
-                      className="w-full h-2 cursor-pointer appearance-none rounded-lg bg-ink-200 accent-brand-600"
-                    />
-                  </div>
-
-                  {/* Consultation Fee Filter */}
-                  <div>
-                    <label className="mb-3 block text-sm font-semibold text-ink-900">
-                      Max Fee: ₹{maxFee}
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="10000"
-                      step="500"
-                      value={maxFee}
-                      onChange={(e) => setMaxFee(Number(e.target.value))}
-                      className="w-full h-2 cursor-pointer appearance-none rounded-lg bg-ink-200 accent-brand-600"
-                    />
-                  </div>
-
-                  {/* Hospital Filter */}
-                  <div>
-                    <label className="mb-3 block text-sm font-semibold text-ink-900">
-                      Hospital
-                    </label>
-                    <select
-                      value={selectedHospital}
-                      onChange={(e) => setSelectedHospital(e.target.value)}
-                      className="w-full rounded-xl border border-ink-200 bg-white px-3 py-2.5 text-ink-900 outline-none transition hover:border-brand-300 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
-                    >
-                      {hospitals.map((hospital) => (
-                        <option key={hospital} value={hospital}>
-                          {hospital === "all"
-                            ? "All Hospitals"
-                            : getHospitalName(hospital)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Clear Filters */}
-                <div className="mt-5 flex justify-end border-t border-ink-100 pt-4">
-                  <button
-                    onClick={() => {
-                      setSearchTerm("");
-                      setSelectedSpecialization("all");
-                      setMinExperience(0);
-                      setMaxFee(10000);
-                      setSelectedHospital("all");
-                    }}
-                    className="flex items-center gap-2 rounded-xl px-4 py-2 font-medium text-ink-500 transition hover:bg-rose-50 hover:text-rose-600"
-                  >
-                    <X size={16} />
-                    Clear Filters
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        {/* LOADING STATE */}
-        {isLoading && (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <div
-                key={n}
-                className="h-96 animate-pulse rounded-[28px] border border-ink-100 bg-white"
-              />
-            ))}
-          </div>
-        )}
-
-        {/* NO RESULTS */}
-        {!isLoading && filteredDoctors.length === 0 && (
-          <div className="flex flex-col items-center rounded-[28px] border border-dashed border-ink-200 bg-white px-6 py-24 text-center">
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-50">
-              <Stethoscope size={28} className="text-brand-600" />
-            </span>
-            <p className="mt-5 text-xl font-bold text-ink-900">
-              No doctors found
-            </p>
-            <p className="mt-2 text-ink-500">
-              Try adjusting your search or filters
-            </p>
-          </div>
-        )}
-
-        {/* DOCTORS GRID */}
-        {!isLoading && filteredDoctors.length > 0 && (
-          <>
-            <motion.div
-              layout
-              className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
-            >
-              {paginatedDoctors.map((doctor, idx) => (
-                <DoctorCard
-                  key={doctor._id}
-                  doctor={doctor}
-                  index={idx}
-                  onSelect={() => setSelectedDoctor(doctor)}
-                />
-              ))}
-            </motion.div>
-
-            {/* PAGINATION */}
-            {totalPages > 1 && (
-              <div className="mb-8 flex justify-center gap-2">
-                <button
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(1)}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-ink-200 text-ink-600 transition hover:bg-ink-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ArrowLeft size={16} />
-                </button>
-
-                {Array.from({ length: totalPages }).map((_, idx) => {
-                  const page = idx + 1;
-                  const isActive = currentPage === page;
-                  const isNear = Math.abs(page - currentPage) <= 1;
-
-                  if (!isNear && page !== 1 && page !== totalPages) return null;
-
-                  if (page !== 1 && !isNear && totalPages > 3) {
-                    if (idx === 1)
-                      return (
-                        <span key="dots" className="px-2 text-ink-400">
-                          ...
-                        </span>
-                      );
-                    return null;
-                  }
-
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`h-10 w-10 rounded-xl font-semibold transition ${
-                        isActive
-                          ? "bg-brand-700 text-white shadow-md shadow-brand-700/20"
-                          : "border border-ink-200 text-ink-600 hover:bg-ink-50"
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  );
-                })}
-
-                <button
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(totalPages)}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-ink-200 text-ink-600 transition hover:bg-ink-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ArrowRight size={16} />
-                </button>
+            {/* LOADING STATE */}
+            {isLoading && (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {[1, 2, 3, 4].map((n) => (
+                  <div
+                    key={n}
+                    className="h-56 animate-pulse rounded-[22px] border border-ink-100 bg-white"
+                  />
+                ))}
               </div>
             )}
-          </>
-        )}
-      </div>
+
+            {/* NO RESULTS */}
+            {!isLoading && filteredDoctors.length === 0 && (
+              <div className="flex flex-col items-center rounded-[22px] border border-dashed border-ink-200 bg-white px-6 py-24 text-center">
+                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-50">
+                  <Stethoscope size={28} className="text-brand-600" />
+                </span>
+                <p className="mt-5 text-xl font-bold text-ink-900">
+                  No doctors found
+                </p>
+                <p className="mt-2 text-ink-500">
+                  Try adjusting your search or filters
+                </p>
+              </div>
+            )}
+
+            {/* DOCTORS GRID */}
+            {!isLoading && filteredDoctors.length > 0 && (
+              <>
+                <div className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2">
+                  {paginatedDoctors.map((doctor) => (
+                    <DoctorCard
+                      key={doctor._id}
+                      doctor={doctor}
+                      onSelect={() => setSelectedDoctor(doctor)}
+                      onBook={() =>
+                        navigate(`/book-appointment/${doctor._id}`)
+                      }
+                    />
+                  ))}
+                </div>
+
+                {/* PAGINATION */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center">
+                    <div className="flex items-center gap-3">
+                      <button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage((p) => p - 1)}
+                        className="flex h-11 w-11 items-center justify-center rounded-full border border-ink-200 bg-white text-lg text-ink-600 transition hover:bg-ink-100 disabled:opacity-40"
+                      >
+                        <ArrowLeft size={16} />
+                      </button>
+
+                      {Array.from({ length: totalPages }).map((_, idx) => {
+                        const page = idx + 1;
+
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`flex h-11 w-11 items-center justify-center rounded-full border font-semibold transition ${
+                              currentPage === page
+                                ? "border-brand-800 bg-brand-800 text-white"
+                                : "border-ink-200 bg-white text-ink-700 hover:bg-ink-100"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage((p) => p + 1)}
+                        className="flex h-11 w-11 items-center justify-center rounded-full border border-ink-200 bg-white text-lg text-ink-600 transition hover:bg-ink-100 disabled:opacity-40"
+                      >
+                        <ArrowRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* DOCTOR MODAL */}
       <AnimatePresence>
@@ -529,6 +538,10 @@ const Doctors = () => {
           <DoctorModal
             doctor={selectedDoctor}
             onClose={() => setSelectedDoctor(null)}
+            onBook={() => {
+              setSelectedDoctor(null);
+              navigate(`/book-appointment/${selectedDoctor._id}`);
+            }}
           />
         )}
       </AnimatePresence>
@@ -536,113 +549,94 @@ const Doctors = () => {
   );
 };
 
-// Doctor Card Component
-const DoctorCard = ({ doctor, index, onSelect }) => {
-  const navigate = useNavigate();
-  const rating = doctor.rating?.average || 4.5;
+// =====================================
+// DOCTOR CARD — horizontal layout
+// =====================================
+
+const DoctorCard = ({ doctor, onSelect, onBook }) => {
+  const rating = doctor.rating?.average || 0;
   const reviewCount = doctor.rating?.count || 0;
+  const isVerified = doctor.isAvailable !== false;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index, 8) * 0.06 }}
-      whileHover={{ y: -6 }}
-      className="group overflow-hidden rounded-[28px] border border-ink-100 bg-white shadow-sm transition-shadow hover:shadow-xl"
+      whileHover={{ y: -3 }}
+      transition={{ duration: 0.2 }}
+      className="flex flex-col rounded-[22px] border border-ink-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-lg"
     >
-      {/* Image Section */}
-      <div className="relative h-48 overflow-hidden bg-gradient-to-br from-brand-100 to-brand-50">
+      <div className="flex items-start gap-4">
         <img
           src={
             doctor.image ||
-            "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=600"
+            "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=300"
           }
           alt={doctor.name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+          className="h-20 w-20 shrink-0 rounded-2xl object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 transition group-hover:opacity-100" />
 
-        {/* Specialization Badge */}
-        <div className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-brand-700 backdrop-blur-sm">
-          {doctor.specialization}
-        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <h3 className="truncate text-xl font-bold text-ink-900">
+              Dr. {doctor.name}
+            </h3>
+            {isVerified && (
+              <BadgeCheck
+                size={18}
+                className="shrink-0 fill-brand-600 text-white"
+              />
+            )}
+          </div>
 
-        {/* Rating Badge */}
-        <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-amber-400 px-2.5 py-1 text-xs font-bold text-amber-950 shadow-md">
-          <Star size={12} className="fill-amber-950" />
-          {rating.toFixed(1)}
+          <p className="mt-0.5 truncate text-sm text-ink-500">
+            {doctor.specialization}
+          </p>
+
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-600">
+            <span className="flex items-center gap-1.5">
+              <Briefcase size={14} className="text-ink-400" />
+              {doctor.experience} Yrs Exp
+            </span>
+            <span className="flex items-center gap-1">
+              <Star size={14} className="fill-amber-400 text-amber-400" />
+              <span className="font-semibold text-ink-900">
+                {rating.toFixed(1)}
+              </span>
+              <span className="text-ink-400">({reviewCount} Reviews)</span>
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Content Section */}
-      <div className="p-6">
-        <h3 className="text-xl font-bold text-ink-900">Dr. {doctor.name}</h3>
-
-        {/* Doctor Info */}
-        <div className="mt-3 space-y-2 text-sm text-ink-600">
-          <div className="flex items-center gap-2">
-            <Stethoscope size={16} className="text-brand-600" />
-            <span>{doctor.qualification || "MBBS, MD"}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Award size={16} className="text-brand-600" />
-            <span>{doctor.experience} years experience</span>
-          </div>
-          {doctor.hospital?.name && (
-            <div className="flex items-center gap-2">
-              <MapPin size={16} className="text-brand-600" />
-              <span className="truncate">{doctor.hospital.name}</span>
-            </div>
-          )}
+      <div className="mt-5 flex items-center justify-between gap-3 border-t border-ink-100 pt-5">
+        <div className="flex items-center gap-1 text-sm font-semibold text-ink-900">
+          <IndianRupee size={15} className="text-brand-700" />
+          {doctor.consultationFee}
         </div>
 
-        {/* Rating & Reviews */}
-        <div className="mt-4 border-t border-ink-100 pt-4">
-          <div className="mb-3 flex items-center gap-1.5">
-            <Users size={14} className="text-ink-400" />
-            <span className="text-sm text-ink-500">
-              {reviewCount} reviews
-            </span>
-          </div>
-
-          {/* Fee */}
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-0.5">
-              <IndianRupee size={16} className="text-brand-700" />
-              <span className="font-bold text-ink-900">
-                {doctor.consultationFee}
-              </span>
-              <span className="ml-1 text-xs text-ink-400">consultation</span>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate(`/book-appointment/${doctor._id}`)}
-              className="flex-1 rounded-xl bg-brand-700 py-2.5 font-semibold text-white shadow-md shadow-brand-700/20 transition hover:bg-brand-800"
-            >
-              Book Now
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={onSelect}
-              className="flex-1 rounded-xl border-2 border-brand-600 py-2.5 font-semibold text-brand-700 transition hover:bg-brand-50"
-            >
-              View Profile
-            </motion.button>
-          </div>
+        <div className="flex flex-1 gap-3">
+          <button
+            onClick={onSelect}
+            className="flex h-11 flex-1 items-center justify-center rounded-xl border border-ink-200 bg-white text-sm font-semibold text-ink-700 transition hover:border-brand-600 hover:text-brand-700"
+          >
+            View Profile
+          </button>
+          <button
+            onClick={onBook}
+            className="flex h-11 flex-1 items-center justify-center rounded-xl bg-brand-800 text-sm font-semibold text-white transition hover:bg-brand-900"
+          >
+            Book Appointment
+          </button>
         </div>
       </div>
     </motion.div>
   );
 };
 
-// Doctor Modal Component
-const DoctorModal = ({ doctor, onClose }) => {
+// =====================================
+// DOCTOR MODAL — full profile
+// =====================================
+
+const DoctorModal = ({ doctor, onClose, onBook }) => {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -658,7 +652,6 @@ const DoctorModal = ({ doctor, onClose }) => {
         onClick={(e) => e.stopPropagation()}
         className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[28px] bg-white"
       >
-        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute right-6 top-6 z-10 rounded-full bg-white/90 p-2 text-ink-600 shadow-md transition hover:bg-white hover:text-ink-900"
@@ -666,7 +659,6 @@ const DoctorModal = ({ doctor, onClose }) => {
           <X size={22} />
         </button>
 
-        {/* Header Image */}
         <div className="relative h-64 bg-gradient-to-br from-brand-600 to-brand-400">
           <img
             src={
@@ -678,7 +670,6 @@ const DoctorModal = ({ doctor, onClose }) => {
           />
         </div>
 
-        {/* Content */}
         <div className="p-8">
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
@@ -693,7 +684,7 @@ const DoctorModal = ({ doctor, onClose }) => {
               <Star size={20} className="fill-amber-400 text-amber-400" />
               <div>
                 <p className="font-bold text-ink-900">
-                  {(doctor.rating?.average || 4.5).toFixed(1)}
+                  {(doctor.rating?.average || 0).toFixed(1)}
                 </p>
                 <p className="text-xs text-ink-500">
                   {doctor.rating?.count || 0} reviews
@@ -702,7 +693,6 @@ const DoctorModal = ({ doctor, onClose }) => {
             </div>
           </div>
 
-          {/* Details Grid */}
           <div className="mb-6 grid gap-6 rounded-2xl bg-ink-50 p-6 md:grid-cols-2">
             <div>
               <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-400">
@@ -739,11 +729,11 @@ const DoctorModal = ({ doctor, onClose }) => {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-4 border-t border-ink-100 pt-6">
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
+              onClick={onBook}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-700 py-3 font-bold text-white shadow-md shadow-brand-700/20 transition hover:bg-brand-800"
             >
               <Calendar size={20} />
